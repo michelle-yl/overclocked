@@ -2,7 +2,7 @@
 
 A single-player kitchen game on the DE1-SoC, inspired by Overcooked. Its main twist is an overclock key: the player can run the whole kitchen 1.5× faster, but the heat this builds ends the game if it reaches the limit.
 
-This is the final plan. It merges the earlier versions, keeps overclock, and cuts chopping and order patience. The older drafts are in [archive/](archive/) for reference only. [SCHEDULE.md](SCHEDULE.md) has the weekly task list.
+This is the final plan. It merges the earlier versions. The older drafts are in [archive/](archive/) for reference only. [SCHEDULE.md](SCHEDULE.md) has the weekly task list.
 
 Course: ECE241H1 F, Digital Systems. Target board: DE1-SoC (Cyclone V, `5CSEMA5F31C6`).
 
@@ -22,14 +22,12 @@ Reference files in `../project/`: the project spec and VGA Adapter page (`.html`
 10. [Verification](#10-verification)
 11. [Concepts](#11-concepts)
 12. [Components and deliverables](#12-components-and-deliverables)
-13. [Changes since the proposal](#13-changes-since-the-proposal)
+13. [Summary block diagram](#13-summary-block-diagram)
 14. [Risks](#14-risks)
 
 ---
 
 ## 1. Read this first
-
-**Final scope.** Overclock stays in. Chopping and order patience are cut, and they are not stretch goals. If your submitted proposal mentioned chopping, say so in the Milestone 1 PDF (Section 13 has the wording).
 
 **Write the Verilog yourselves.** The spec says your grade depends heavily on explaining your code, and the TA will question you on it. For that reason this plan defines behaviour, interfaces, and tests, and contains no RTL. Check the syllabus AI policy to see how it treats AI help with planning too, since I only have the project page's summary of it.
 
@@ -53,7 +51,7 @@ Reference files in `../project/`: the project spec and VGA Adapter page (`.html`
 | Builds on lecture and lab material | Counters, registers, BCD, muxes, and 7-segment decoders are reused directly | 11 |
 | Own work, others' code cited | Only the VGA adapter and PS/2 core are external. They count as "less work", so the plan's scope sits in your own modules on top of them. | 6.3 |
 | Team of 2, at least 1.5 labs each, both working every milestone | Split by module with work in every phase | 9 |
-| Proposal | Submitted Nov 6 | 13 |
+| Proposal | Submitted Nov 6 | |
 | M1 (Week 10): part working on board, plus simulations | Kitchen on VGA, chef moved by keyboard, with collision and boost | 8 |
 | M2 (Week 11): most of it on board, plus simulations of internals | Full cooking loop with score and timer; `heat_ctrl` simulated | 8 |
 | Milestone PDF: who did what, code, explanation, ModelSim | Testbench per module, PDF checklist | 10, 12 |
@@ -70,7 +68,7 @@ The player has 2 minutes to complete as many food orders as possible. One random
 
 The player can hold the overclock key to speed up the whole kitchen, including cooking and burning. Boosting builds heat, and if heat reaches its limit the game ends early in a meltdown.
 
-With chopping gone, the stove is the bottleneck in every order. Overclock is the main way to cut that wait, so when to boost becomes the core decision of the game.
+The stove is the bottleneck in every order. Overclock is the main way to cut that wait, so when to boost becomes the core decision of the game.
 
 ### 3.2 Changes to your feature table
 
@@ -78,11 +76,9 @@ With chopping gone, the stove is the bottleneck in every order. Overclock is the
 |---|---|---|---|
 | Movement | Arrow keys, X/Y registers | Same, but locked to the tile grid with smooth 2 px steps | Collision becomes one tile lookup instead of box overlap maths |
 | Pickup | Space near a station | Space acts on the tile the chef **faces** | "Near" is ambiguous when two stations are close. Facing needs only a direction register. |
-| Chopping | Wait 3 s | **Cut.** Lettuce and tomato go straight from crate to assembly | Removes a station, an FSM, and two item codes; frees time for overclock |
 | Cooking | Wait 5 s | Runs in the background, about 5 s | Same as yours |
 | Burning | 5 s later | Same; a burnt patty must go in the trash | Adds a recovery action |
 | Orders | ROM + order register | ROM holds a 4-bit ingredient mask per recipe; 1 active order; a random generator picks recipes | A serve check becomes one equality comparison |
-| Patience | 25 s | **Cut** | One active order needs no expiry logic |
 | Scoring | +100 | +10 per order, stored directly in BCD | HEX digits need no binary-to-decimal conversion |
 | Game timer | 2 minutes | Same, as a BCD m:ss down-counter | Direct extension of Lab 4 |
 | Game over | Show score | Freeze at 0:00 or on meltdown with the final score on HEX; reset restarts | Avoids extra screens and font art |
@@ -375,8 +371,6 @@ Score and time go straight to the HEX displays, so they aren't on this bus.
 | `score_bcd` | BCD accumulator | Datapath | A |
 | `hex7seg` | HEX debug displays | Reused from Lab 4 | Either |
 
-Dropping chopping removed `board_fsm` from Member B, so the stove moves from A to B and the game timer moves from B to A. Section 9 has the reasoning.
-
 ### 6.3 External code to cite
 
 | Code | Source | Used for |
@@ -453,7 +447,7 @@ Key dates: Milestone 1 Thu Nov 19, Milestone 2 Thu Nov 26, presentation Thu Dec 
 
 **Milestone 1 demo (Week 10).** The kitchen renders from ROM on VGA. The chef walks with the arrow keys, stops at counters, and faces the correct way. Holding `Z` speeds the chef up 1.5×, with no heat limit yet. HEX shows the last scan byte and a running timer. Simulations cover `kbd_decoder`, `chef_move`, `tick_gen`, and the renderer's first rows of pixels.
 
-**Milestone 2 demo (Week 11).** The whole loop runs on the board: pick up, cook, burn, assemble, serve, score, time out. Simulations show the internals that are hard to see on the board, namely `interact_decoder`, `stove_fsm`, `order_mgr`, and `heat_ctrl`. Cutting chopping leaves room to put `heat_ctrl` on the board in Week 11; if it slips, it goes on in Week 12.
+**Milestone 2 demo (Week 11).** The whole loop runs on the board: pick up, cook, burn, assemble, serve, score, time out. Simulations show the internals that are hard to see on the board, namely `interact_decoder`, `stove_fsm`, `order_mgr`, and `heat_ctrl`. `heat_ctrl` goes on the board in Week 11 if time allows, otherwise in Week 12.
 
 ### 8.1 Fallback tiers
 
@@ -491,8 +485,6 @@ Sound is out of scope, so the audio core and codec pins are not used.
 | Milestone 1 | Renderer, ROMs, asset script, game timer | Keyboard decoder, input control, chef movement, ticks with boost |
 | Milestone 2 | Order manager, LFSR, recipe ROM, score, order display, game FSM, renderer layers | Interaction decoder, kitchen state, progress timer, stove FSM, heat controller, integration |
 | Final | Heat bar, art polish, and debug | Overclock tuning and debug |
-
-Cutting chopping removed `board_fsm` from Member B. To keep the split even, the stove and progress timer move from A to B, and the game timer moves from B to A, next to `game_fsm`, which it drives. If you already started a module under the old split, keep it with whoever wrote it.
 
 Both members draw art. Swap modules if your interests differ, but keep work in each milestone for both. **Each of you should be able to explain the other's modules**, since the TA can ask either of you. A short code walkthrough before each milestone covers this.
 
@@ -648,13 +640,9 @@ Keep `hex7seg` in one file. Your labs copied it into each part, which causes dup
 
 ---
 
-## 13. Changes since the proposal
+## 13. Summary block diagram
 
-The proposal was due Nov 6. If it described chopping or order patience, add a short note like this to the Milestone 1 PDF:
-
-> We removed the chopping board and order patience to make room for the overclock mechanic. Every recipe now needs a cooked patty, so the stove is the bottleneck, and overclock, which speeds up cooking at the cost of heat, is the main way to beat it.
-
-Updated block diagram for the milestone PDFs and slides:
+For the milestone PDFs and slides:
 
 ```
  PS/2 keyboard -> PS/2 core* -> Key decoder -> Chef movement -----+
@@ -684,7 +672,7 @@ Updated block diagram for the milestone PDFs and slides:
 | ROM reads as X or zero in ModelSim | High | Low | Copy the `.mif` into the simulation folder (Section 5.3) |
 | Integration bugs at the end | Medium | High | Agree on the bus early; integrate at each milestone, not only at the end |
 | Long Quartus compiles | Medium | Low | Debug in ModelSim first, compile less often |
-| Game too easy without chopping, with idle time at the stove | Medium | Medium | Raise cook time; second stove is the first stretch goal |
+| Game too easy, with idle time at the stove | Medium | Medium | Raise cook time; second stove is the first stretch goal |
 | Players avoid overclock because meltdown ends the run | Medium | Medium | Clear warning at heat 24; tune heat rates so short bursts feel safe |
 | Tick rate change causes a missed or double pulse | Medium | Medium | Apply the new period only at a wrap; test in `sim/tick_gen/` |
 | Chef tears during repaint at 90 Hz | Low | Low | Copy the chef position into registers at the start of each frame |

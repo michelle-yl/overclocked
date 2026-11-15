@@ -1,6 +1,6 @@
 # Overclocked: Project Schedule
 
-Week-by-week tasks to the final presentation, for the final scope: overclock in, chopping and order patience cut. Design details are in [PLAN.md](PLAN.md), and file names here match it. Earlier drafts are in [archive/](archive/).
+Week-by-week tasks to the final presentation. Design details are in [PLAN.md](PLAN.md), and file names here match it. Earlier drafts are in [archive/](archive/).
 
 Updated Sat Nov 14, at the end of Week 9.
 
@@ -19,8 +19,6 @@ Three rules apply every week:
 - **Simulate before compiling.** Every new module gets `sim/<module>/testbench.v` and `wave.do` before it goes on the board. Trivial modules such as `hex7seg` and `hud_mux` can rely on integration simulation.
 - **Save evidence as you go.** Store waveform screenshots in `docs/waves/` and add bugs to `docs/bug_log.md`. The milestone PDFs and slides need both.
 - **Aim to finish a day early.** Milestone PDFs must be on Quercus before your lab period, so the target is the night before.
-
-**What the rescope changes in this schedule.** `board_fsm` and its simulation are gone. Item art drops to six items, and the map loses the board tile. The stove and progress timer move to Member B, and the game timer moves to Member A (PLAN Section 9). The time saved goes to putting `heat_ctrl` on the board in Week 11 instead of Week 12.
 
 ---
 
@@ -80,7 +78,7 @@ The proposal is in. Finish anything below that isn't done before starting Week 1
 | ☐ | `src/input_ctrl.v` | Create | Synchronizers, input select, Space press edge, latch until tick, held overclock flag |
 | ☐ | `src/chef_move.v` | Create | Tile position, direction, walk frame, Idle and Step states |
 | ☐ | `assets/tiles/*.png` | Create | Floor, counter, crates, stove, assembly, trash, 8 chef sprites (4 directions × 2 walk frames) |
-| ☐ | `assets/map_kitchen.txt` | Create | Kitchen layout from PLAN Section 3.7 (no board tile) |
+| ☐ | `assets/map_kitchen.txt` | Create | Kitchen layout from PLAN Section 3.7 |
 | ☐ | `tools/make_mifs.py` | Create | PNGs and map text to `.mif` files |
 | ☐ | `assets/tile_rom.mif`, `assets/map_rom.mif` | Generate | ROM contents |
 | ☐ | `assets/background_320_9.mif` | Generate | Plain adapter background, using `bmp_to_mif` |
@@ -157,7 +155,6 @@ The proposal is in. Finish anything below that isn't done before starting Week 1
 | ☐ | PDF item |
 |---|---|
 | ☐ | What each teammate accomplished, with block diagrams |
-| ☐ | Note on the scope change since the proposal (PLAN Section 13) |
 | ☐ | Demo code with an explanation of how it works |
 | ☐ | ModelSim waveforms for `kbd_decoder`, `chef_move`, `tick_gen`, and `renderer` |
 | ☐ | Any other in-progress code, with simulations |
