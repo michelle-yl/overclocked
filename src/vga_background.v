@@ -24,14 +24,14 @@ module vga_background(CLOCK_50, KEY, LEDR, VGA_R, VGA_G, VGA_B,
     input wire [7:0] player_y;
 
 	output wire [9:0] LEDR;
-    output [7:0] VGA_R;
-    output [7:0] VGA_G;
-    output [7:0] VGA_B;
-    output VGA_HS;
-    output VGA_VS;
-    output VGA_BLANK_N;
-    output VGA_SYNC_N;
-    output VGA_CLK;    
+    output wire [7:0] VGA_R;
+    output wire [7:0] VGA_G;
+    output wire [7:0] VGA_B;
+    output wire VGA_HS;
+    output wire VGA_VS;
+    output wire VGA_BLANK_N;
+    output wire VGA_SYNC_N;
+    output wire VGA_CLK;    
 
 	// The four signals below are used in demos that actively draw pixels on top of the 
     // background MIF. In this example, only the background is drawn, so these signals are 
@@ -76,3 +76,5 @@ module vga_background(CLOCK_50, KEY, LEDR, VGA_R, VGA_G, VGA_B,
     defparam VGA.BACKGROUND_IMAGE = "assets/kitchen_background.mif";
     defparam VGA.COLOR_DEPTH = COLOR_DEPTH;
 endmodule
+
+`default_nettype wire

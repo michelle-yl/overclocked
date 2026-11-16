@@ -7,7 +7,7 @@ set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CSEMA5F31C6
 set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
 set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
-set_global_assignment -name SDC_FILE DE1_SoC.sdc
+set_global_assignment -name SDC_FILE overclocked.sdc
 
 
 #============================================================
@@ -958,6 +958,9 @@ set_global_assignment -name VERILOG_FILE src/top.v
 set_global_assignment -name VERILOG_FILE src/vga_background.v
 set_global_assignment -name VERILOG_FILE src/sprite_renderer.v
 set_global_assignment -name VERILOG_FILE src/keyboard_input.v
+set_global_assignment -name VERILOG_FILE src/tick.v
+set_global_assignment -name VERILOG_FILE src/chef_mvmt.v
+set_global_assignment -name VERILOG_FILE src/hex7seg.v
 set_global_assignment -name VERILOG_FILE src/vga_adapter/vga_adapter.v
 set_global_assignment -name VERILOG_FILE src/vga_adapter/vga_controller.v
 set_global_assignment -name VERILOG_FILE src/vga_adapter/vga_pll.v
