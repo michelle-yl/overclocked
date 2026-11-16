@@ -75,7 +75,7 @@ The stove is the bottleneck in every order. Overclock is the main way to cut tha
 | Feature | Your idea | Plan | Reason |
 |---|---|---|---|
 | Movement | Arrow keys, X/Y registers | Same, but locked to the tile grid with smooth 2 px steps | Collision becomes one tile lookup instead of box overlap maths |
-| Pickup | Space near a station | Space acts on the tile the chef **faces** | "Near" is ambiguous when two stations are close. Facing needs only a direction register. |
+| Pickup | Space near a station | Space acts on the station next to the chef's tile; the layout guarantees at most one | No direction register; the target is a small decoder on the chef's tile |
 | Cooking | Wait 5 s | Runs in the background, about 5 s | Same as yours |
 | Burning | 5 s later | Same; a burnt patty must go in the trash | Adds a recovery action |
 | Orders | ROM + order register | ROM holds a 4-bit ingredient mask per recipe; 1 active order; a random generator picks recipes | A serve check becomes one equality comparison |
@@ -128,9 +128,9 @@ The chef carries one item at a time, so each part is its own trip. A rough estim
 
 ### 3.6 Interaction table
 
-This table is the core of the game logic. It should become a single combinational decoder, tested row by row. Every action is one Space press. Any combination not listed does nothing. A wrong order clears the assembly because ingredients can't be removed one at a time, so it would otherwise block every later order.
+This table is the core of the game logic. It should become a single combinational decoder, tested row by row. Every action is one Space press. The station is found from the chef's tile alone (Section 3.7). Any combination not listed does nothing. A wrong order clears the assembly because ingredients can't be removed one at a time, so it would otherwise block every later order.
 
-| Facing | Holding | Condition | Result |
+| Station | Holding | Condition | Result |
 |---|---|---|---|
 | Crate (bun, lettuce, tomato, patty) | Empty | | Holding = that ingredient |
 | Stove | Patty, raw | Stove empty | Starts cooking |
@@ -160,6 +160,21 @@ r12-14 Current order icon
 ```
 
 Key: `#` solid counter or wall, `.` floor, `B` bun, `L` lettuce, `T` tomato, `P` patty, `S` stove, `A` assembly, `X` trash.
+
+**Layout rule: no floor tile may be next to two stations.** Keep at least one counter tile between any two stations. Then the chef's tile alone decides the interaction target:
+
+| Chef tile (x, y) | Station |
+|---|---|
+| (2, 4) | Bun crate |
+| (4, 4) | Lettuce crate |
+| (6, 4) | Tomato crate |
+| (8, 4) | Patty crate |
+| (14, 4) | Stove |
+| (10, 6) or (10, 8) | Assembly |
+| (3, 10) | Trash |
+| Anything else | None |
+
+If you change the layout, update this table and check the rule again.
 
 ### 3.8 Overclock
 
@@ -200,7 +215,7 @@ There are no end screens, so a meltdown is shown by three things: the heat bar s
  PS/2 keyboard           v                                                             v
  ---------> [PS/2 core*] -> [kbd_decoder] -> [input_ctrl] -> [chef_move] <-> [map_rom A]
                                                  ^               |
- KEY/SW (backup) --------------------------------+               | tile x/y, facing
+ KEY/SW (backup) --------------------------------+               | tile x/y        
                                                                  v
  [tick_gen] ticks ----------> all game blocks          [interact_decoder] <-> [map_rom A]
                                                          |          |
@@ -300,7 +315,7 @@ That one-clock figure requires the `q` output register to be off (Section 5.3). 
 - Chef hit test: `(x - chef_px) < 16` as an unsigned subtraction, likewise for y.
 - The heat bar is 32 px wide at full scale, so `heat` is directly its width in pixels. It is a solid colour, so it needs no tiles.
 
-**Tile budget (at most 64):** about 10 kitchen, 6 items (bun, lettuce, tomato, and three patty states), 4 order icons, and 8 chef sprites (4 directions × 2 walk frames) gives about 28. The assembly's contents can be drawn as four small coloured dots, one per mask bit, which avoids 16 assembly tiles.
+**Tile budget (at most 64):** about 10 kitchen, 6 items (bun, lettuce, tomato, and three patty states), 4 order icons, and 1 chef sprite gives about 21. The assembly's contents can be drawn as four small coloured dots, one per mask bit, which avoids 16 assembly tiles.
 
 ### 5.3 ROM creation
 
@@ -335,8 +350,6 @@ Agree on this before building the renderer layers, since it lets both members wo
 | Signal | Width | Meaning |
 |---|---|---|
 | `chef_px`, `chef_py` | 9, 8 | Chef pixel position |
-| `chef_dir` | 2 | Facing direction |
-| `chef_frame` | 1 | Walk animation frame |
 | `held_item` | 3 | What the chef holds |
 | `stove_state`, `stove_progress` | 2, 4 | Empty, cooking, cooked, or burnt, and bar width |
 | `assembly_mask` | 4 | Ingredients at the assembly station |
@@ -354,7 +367,7 @@ Score and time go straight to the HEX displays, so they aren't on this bus.
 | `tick_gen` | `game_tick` (60 or 90 Hz), `frame_60`, `tick_1s`, and `tick_4hz` enable pulses | Counters | B |
 | `kbd_decoder` | Scan bytes to held-key flags | Sequence detector FSM | B |
 | `input_ctrl` | Synchronize KEY/SW, keyboard or KEY/SW select, press edges, latch until tick | Registers | B |
-| `chef_move` | Position, direction, walk frame, tile-step logic | FSM + datapath | B |
+| `chef_move` | Position, tile-step logic | FSM + datapath | B |
 | `interact_decoder` | Section 3.6 table | Combinational | B |
 | `kitchen_state` | `held_item` and `assembly_mask` registers | Registers | B |
 | `progress_timer` | Reusable prescaler + 4-bit step counter, used for cook and burn | Counter | B |
@@ -414,10 +427,10 @@ Three pitfalls to design for:
 
 The chef holds a tile position plus a pixel offset.
 
-- **Idle (aligned to a tile):** on a tick with an arrow held, turn to face that way and look up the next tile in the map ROM. If it is floor, enter Step. If it is solid, stay put, which is how the player faces a station.
-- **Step:** move 2 px per tick and toggle the walk frame every 4 ticks. After 8 ticks, update the tile position and return to Idle.
+- **Idle (aligned to a tile):** on a tick with a movement key held, look up the next tile in that direction in the map ROM. If it is floor, enter Step. If it is solid, stay put.
+- **Step:** move 2 px per tick. After 8 ticks, update the tile position and return to Idle.
 
-If two arrows are held, a fixed priority picks one. The target for interaction is the tile one step ahead in the facing direction.
+If two movement keys are held, a fixed priority picks one. There is no facing direction: the interaction target comes from the chef's tile (Section 3.7).
 
 ### 7.3 Board I/O
 
@@ -445,7 +458,7 @@ KEY and SW change independently of `CLOCK_50`, so pass them through a two-flip-f
 
 Key dates: Milestone 1 Thu Nov 19, Milestone 2 Thu Nov 26, presentation Thu Dec 3. [SCHEDULE.md](SCHEDULE.md) has the weekly task list, including files, simulations, and board tests.
 
-**Milestone 1 demo (Week 10).** The kitchen renders from ROM on VGA. The chef walks with the arrow keys, stops at counters, and faces the correct way. Holding `Z` speeds the chef up 1.5×, with no heat limit yet. HEX shows the last scan byte and a running timer. Simulations cover `kbd_decoder`, `chef_move`, `tick_gen`, and the renderer's first rows of pixels.
+**Milestone 1 demo (Week 10).** The kitchen renders from ROM on VGA. The chef walks with the arrow keys, and stops at counters. Holding `Z` speeds the chef up 1.5×, with no heat limit yet. HEX shows the last scan byte and a running timer. Simulations cover `kbd_decoder`, `chef_move`, `tick_gen`, and the renderer's first rows of pixels.
 
 **Milestone 2 demo (Week 11).** The whole loop runs on the board: pick up, cook, burn, assemble, serve, score, time out. Simulations show the internals that are hard to see on the board, namely `interact_decoder`, `stove_fsm`, `order_mgr`, and `heat_ctrl`. `heat_ctrl` goes on the board in Week 11 if time allows, otherwise in Week 12.
 
@@ -501,9 +514,9 @@ Follow your lab flow: `testbench.v` and `wave.do` in a ModelSim folder per modul
 | `tick_gen` | Pulses are exactly one clock wide, at the correct period; `game_tick` changes between 60 and 90 Hz only at a wrap, with no missed or double pulse; `frame_60`, `tick_1s`, and `tick_4hz` don't change with `boost` |
 | `kbd_decoder` | Arrow press and release, Space, `Z`, repeated press bytes, unknown codes ignored, `E0 F0` sequences, idle gaps between bytes |
 | `input_ctrl` | One action per press despite key repeat; press between ticks isn't lost; overclock stays active while held |
-| `chef_move` | Moves 16 px per tile step; blocked at wall but still turns; direction change only when aligned; walk frame toggles only while stepping |
+| `chef_move` | Moves 16 px per tile step; blocked at walls and counters; new step only starts when aligned |
 | `progress_timer` | Counts only when enabled, signals done once, clears on reset |
-| `interact_decoder` | Every row of Section 3.6, plus sample unlisted combinations doing nothing |
+| `interact_decoder` | Every row of Section 3.6, plus sample unlisted combinations doing nothing; each Section 3.7 chef tile maps to the right station, all others to none |
 | `stove_fsm` | Empty, cooking, cooked, burnt in order; removal at each stage; runs faster at 90 Hz |
 | `order_mgr` | Match loads the next order, no match keeps the current order, no changes after game over |
 | `score_bcd` | Carry at 90 + 10, saturates at 990 |
@@ -559,7 +572,7 @@ These are ECE241 material even though your labs so far haven't used them.
 | Datapath and control separation | Renderer, `order_mgr`, `chef_move` |
 | Shift registers | `lfsr16`, edge detector |
 | Priority encoders | Arrow key priority |
-| Decoders | Station type from tile ID, recipe ID to mask |
+| Decoders | Station from chef tile, recipe ID to mask |
 | Comparators | Assembly mask against the current order, chef hit test, timer limits, heat warning and meltdown |
 
 ### 11.3 New concepts to learn

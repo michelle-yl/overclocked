@@ -48,9 +48,9 @@ module top (CLOCK_50, SW, KEY, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, LEDR,
         .VGA_VS(VGA_VS),
         .VGA_BLANK_N(VGA_BLANK_N),
         .VGA_SYNC_N(VGA_SYNC_N),
-        .VGA_CLK(VGA_CLK)
+        .VGA_CLK(VGA_CLK),
         .player_x(9'd100),  // Temporary chef position for testing
-        .player_y(8'd100), // Michelle's movement coordinates will replace these later
+        .player_y(8'd100) // Michelle's movement coordinates will replace these later
     );
     // Read keyboard input and track which keys are held down
     keyboard_input keyboard (

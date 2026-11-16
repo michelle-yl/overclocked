@@ -76,8 +76,8 @@ The proposal is in. Finish anything below that isn't done before starting Week 1
 | ☐ | `src/tick_gen.v` | Create | `game_tick` (60 or 90 Hz), `frame_60`, `tick_1s`, and `tick_4hz`, based on `counter_26b` in `lab4/part3.v` |
 | ☐ | `src/kbd_decoder.v` | Create | Sequence detector, scan bytes to held-key flags for arrows, Space, and `Z` |
 | ☐ | `src/input_ctrl.v` | Create | Synchronizers, input select, Space press edge, latch until tick, held overclock flag |
-| ☐ | `src/chef_move.v` | Create | Tile position, direction, walk frame, Idle and Step states |
-| ☐ | `assets/tiles/*.png` | Create | Floor, counter, crates, stove, assembly, trash, 8 chef sprites (4 directions × 2 walk frames) |
+| ☐ | `src/chef_move.v` | Create | Tile position, Idle and Step states |
+| ☐ | `assets/tiles/*.png` | Create | Floor, counter, crates, stove, assembly, trash, 1 chef sprite |
 | ☐ | `assets/map_kitchen.txt` | Create | Kitchen layout from PLAN Section 3.7 |
 | ☐ | `tools/make_mifs.py` | Create | PNGs and map text to `.mif` files |
 | ☐ | `assets/tile_rom.mif`, `assets/map_rom.mif` | Generate | ROM contents |
@@ -93,7 +93,7 @@ The proposal is in. Finish anything below that isn't done before starting Week 1
 | ☐ | `sim/tick_gen/` | Pulses are one clock wide at the right period, using scaled parameters; `game_tick` changes rate only at a wrap; other pulses ignore `boost` |
 | ☐ | `sim/kbd_decoder/` | Arrows, Space, `Z`, repeats, `E0 F0` releases, and unknown codes all behave |
 | ☐ | `sim/input_ctrl/` | One action per press despite key repeat; press between ticks isn't lost; overclock stays active while held |
-| ☐ | `sim/chef_move/` | 16 px per tile; turns but doesn't move at a wall; turns only when aligned; walk frame toggles while stepping |
+| ☐ | `sim/chef_move/` | 16 px per tile; doesn't move into walls or counters; new step only starts when aligned |
 | ☐ | `sim/tile_rom/`, `sim/map_rom/` | Known addresses match the `.mif`; data is valid one clock later |
 | ☐ | `sim/renderer/` | First rows have correct x, y, and colour; 76,800 `plot` pulses per frame |
 
@@ -124,7 +124,7 @@ The proposal is in. Finish anything below that isn't done before starting Week 1
 | ☐ | File | Action | Purpose |
 |---|---|---|---|
 | ☐ | `src/overclocked_top.v` | Modify | Connect PS/2, `kbd_decoder`, `input_ctrl`, `chef_move`, `tick_gen`, `renderer`, and VGA adapter; wire the held overclock flag straight to `boost` for now |
-| ☐ | `src/renderer.v` | Modify | Read live chef position and direction |
+| ☐ | `src/renderer.v` | Modify | Read live chef position |
 | ☐ | `src/game_state_stub.v` | Modify | Keep constants only for signals not built yet |
 | ☐ | `src/game_timer.v` | Create | BCD m:ss down-counter on HEX |
 | ☐ | `overclocked.sdc` | Modify | Only if timing reports show a problem |
@@ -144,7 +144,6 @@ The proposal is in. Finish anything below that isn't done before starting Week 1
 | ☐ | Test | Pass when |
 |---|---|---|
 | ☐ | Walk the whole kitchen | Movement is smooth, and the chef stops at every counter |
-| ☐ | Face and walk each direction | The correct sprite and walk animation appear |
 | ☐ | Hold `Z` while walking | Chef moves 1.5× faster; speed returns on release; picture stays stable |
 | ☐ | Backup controls with `SW[9]` | KEY buttons move the chef; `SW[8]` boosts |
 | ☐ | HEX displays | Timer counts down, last scan byte shows |
@@ -313,7 +312,7 @@ Member A leads video, orders, score, and game flow. Member B leads input, intera
 ### Week 9
 
 - **Member A:** code the renderer and ROMs; draw the floor and counter tiles
-- **Member B:** code the keyboard input, game ticks with boost, and chef movement; draw the chef sprites and station tiles
+- **Member B:** code the keyboard input, game ticks with boost, and chef movement; draw the chef sprite and station tiles
 
 ### Week 10
 

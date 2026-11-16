@@ -1,56 +1,51 @@
-module tickgen(clk, clr, overclk, gametick, tick1s, tick);
+module tickgen(clk, clr, overclk, gametick, tick1s);
 	input clk, clr, overclk;
 
 	reg boost;
-	reg [19:0] Q;
+	reg [19:0] Q1;
+	reg [25:0] Q2;
 	output reg gametick;
+	output reg tick1s;
 
 	parameter TICK60HZ = 20'd833332, TICK90HZ = 20'd555555;
 	wire [19:0] limit = boost ? TICK90HZ : TICK60HZ;
+	parameter TICK1S = 26'd49999999;
 
 	always @(posedge clk) begin
 		if (!clr) 
 		begin
-			Q <= 20'b0;
+			Q1 <= 20'b0;
 			gametick <= 1'b0;
 			boost <=1'b0;
 		end
-		else if (Q == limit)
+		else if (Q1 == limit)
 		begin
 			boost <= overclk;
-			Q <= 20'b0;
+			Q1 <= 20'b0;
 			gametick <= 1'b1;
 		end
 		else begin
 			gametick <= 1'b0;
-			Q <= Q + 1;
+			Q1 <= Q1 + 1;
 		end
 	end
-endmodule
-
-
-module tick1s(clk, clr, onesec);
-	input clk, clr;
-	output onesec;
-	wire [25:0] Q;
-
-	parameter TICK1S = 26'd49999999;
-	always @(posedge Clk) 
+	
+	always @(posedge clk) 
 	begin
-		if (!Clr) 
+		if (!clr) 
 		begin
-			Q <= 26'b0;
-			onesec <= 1'b0;
+			Q2 <= 26'b0;
+			tick1s <= 1'b0;
 		end
-		else if (Q == TICK1S)	
+		else if (Q2 == TICK1S)	
 		begin
-			Q <= 26'b0;
-			onesec <= 1'b1;
+			Q2 <= 26'b0;
+			tick1s <= 1'b1;
 		end
 		else
 		begin 
-			onesec <= 1'b0;
-			Q <= Q + 1;
+			tick1s <= 1'b0;
+			Q2 <= Q2 + 1;
 		end
 	end
 endmodule

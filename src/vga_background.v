@@ -5,7 +5,7 @@
  *  first press KEY[0] to reset the circuit. It will display the contents of a video memory
  *  in the VGA adapter as a background image.
 */
-module module vga_background(CLOCK_50, KEY, LEDR, VGA_R, VGA_G, VGA_B,
+module vga_background(CLOCK_50, KEY, LEDR, VGA_R, VGA_G, VGA_B,
                       VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, player_x, player_y);
 	
     parameter RESOLUTION = "320x240"; // "640x480" "320x240" "160x120"
