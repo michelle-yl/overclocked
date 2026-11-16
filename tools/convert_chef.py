@@ -1,11 +1,15 @@
 
+import os
 from PIL import Image
+
+# Assets live in ../assets relative to this script
+ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
 
 # Size of the chef sprite on the VGA screen
 SIZE = 32
 
 # Open the chef image and keep its transparency
-img = Image.open("chef.png").convert("RGBA")
+img = Image.open(os.path.join(ASSETS, "chef.png")).convert("RGBA")
 
 # Crop away extra transparent space around the chef
 bbox = img.getbbox()
@@ -29,7 +33,7 @@ y_offset = (SIZE - img.height) // 2
 sprite.paste(img, (x_offset, y_offset))
 
 # Save a preview so we can check the result
-sprite.save("chef_preview.png")
+sprite.save(os.path.join(ASSETS, "chef_preview.png"))
 
 # Store the colour and transparency value of each pixel
 colors = []
@@ -73,8 +77,8 @@ def write_mif(filename, data, width):
         f.write("END;\n")
 
 # Create separate files for colours and transparency
-write_mif("chef_sprite.mif", colors, 6)
-write_mif("chef_mask.mif", mask, 1)
+write_mif(os.path.join(ASSETS, "chef_sprite.mif"), colors, 6)
+write_mif(os.path.join(ASSETS, "chef_mask.mif"), mask, 1)
 
 print("Chef sprite conversion complete!")
 print("Created chef_sprite.mif")

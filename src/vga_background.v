@@ -73,6 +73,6 @@ module module vga_background(CLOCK_50, KEY, LEDR, VGA_R, VGA_G, VGA_B,
         .VGA_SYNC_N(VGA_SYNC_N),
         .VGA_CLK(VGA_CLK));
 		defparam VGA.RESOLUTION = RESOLUTION;
-    defparam VGA.BACKGROUND_IMAGE = "kitchen_background.mif";
+    defparam VGA.BACKGROUND_IMAGE = "assets/kitchen_background.mif";
     defparam VGA.COLOR_DEPTH = COLOR_DEPTH;
 endmodule

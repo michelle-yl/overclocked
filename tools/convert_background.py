@@ -1,10 +1,14 @@
 
+import os
 from PIL import Image
 
-img = Image.open("kitchen.png").convert("RGB")
+# Assets live in ../assets relative to this script
+ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets")
+
+img = Image.open(os.path.join(ASSETS, "kitchen.png")).convert("RGB")
 img = img.resize((320, 240), Image.Resampling.NEAREST)
 
-with open("kitchen_background.mif", "w") as f:
+with open(os.path.join(ASSETS, "kitchen_background.mif"), "w") as f:
     f.write("WIDTH=6;\n")
     f.write("DEPTH=76800;\n")
     f.write("ADDRESS_RADIX=UNS;\n")
@@ -37,4 +41,4 @@ for y in range(240):
 
         preview.putpixel((x, y), (r, g, b))
 
-preview.save("kitchen_preview.png")
+preview.save(os.path.join(ASSETS, "kitchen_preview.png"))

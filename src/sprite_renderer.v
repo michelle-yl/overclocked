@@ -39,14 +39,14 @@ module sprite_renderer (
     reg sprite_drawn;
 
     // Memories containing the chef image and transparency
-    (* ram_init_file = "chef_sprite.mif" *)
+    (* ram_init_file = "assets/chef_sprite.mif" *)
     reg [5:0] sprite_memory [0:1023];
 
-    (* ram_init_file = "chef_mask.mif" *)
+    (* ram_init_file = "assets/chef_mask.mif" *)
     reg mask_memory [0:1023];
 
     // Copy of the kitchen image, used to erase the old sprite
-    (* ram_init_file = "kitchen_background.mif" *)
+    (* ram_init_file = "assets/kitchen_background.mif" *)
     reg [5:0] background_memory [0:76799];
 
     reg [5:0] sprite_pixel;
