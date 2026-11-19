@@ -6,7 +6,7 @@ This is the final plan. It merges the earlier versions. The older drafts are in 
 
 Course: ECE241H1 F, Digital Systems. Target board: DE1-SoC (Cyclone V, `5CSEMA5F31C6`).
 
-Reference files in `../project/`: the project spec and VGA Adapter page (`.html`), and the Memory Blocks lab (`mem_lab_Verilog.pdf`).
+Reference files in `../../project/` (the `labs/project` folder): the project spec and VGA Adapter page (`.html`), and the Memory Blocks lab (`mem_lab_Verilog.pdf`).
 
 ## Contents
 
@@ -615,16 +615,17 @@ These are ECE241 material even though your labs so far haven't used them.
 
 ```
 overclocked/
-  PLAN.md, SCHEDULE.md
-  archive/      Earlier plan and schedule drafts
-  overclocked.qpf, overclocked.qsf     (start from ../DE1_SoC.qsf)
+  overclocked.qpf, overclocked.qsf     (pins from docs/reference/DE1_SoC.qsf)
   overclocked.sdc
-  src/          overclocked_top.v, overclocked_defs.vh, one file per module
-  src/ip/       VGA adapter, PS/2 core, generated ROM wrappers, kept separate for citation
-  assets/       PNG tiles, generated .mif files
-  tools/        Python converter
-  sim/<module>/ testbench.v, wave.do
-  docs/         Milestone PDFs, diagrams, slides
+  src/          top.v and one file per module
+  src/vga_adapter/   Provided VGA adapter, kept separate for citation
+  src/testbenches/   <module>_tb.v, one ModelSim testbench per module
+  assets/       PNG art and generated .mif files
+  tools/        Python converters
+  docs/         PLAN.md, SCHEDULE.md, milestone PDFs, diagrams, slides
+  docs/waves/   ModelSim waveform screenshots
+  docs/reference/  DE1_SoC.qsf, the course pin file
+  docs/archive/ Earlier plan and schedule drafts (not in git)
 ```
 
 Keep `hex7seg` in one file. Your labs copied it into each part, which causes duplicate-module errors once everything is in a single project. Use git, since two people will edit this at once.

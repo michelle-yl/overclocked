@@ -1,5 +1,5 @@
 # Old plan drafts (local only)
-archive/*
+docs/archive/
 
 # OS
 .DS_Store
