@@ -1,8 +1,26 @@
+# Old plan drafts (local only)
 archive/*
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Quartus build output (regenerated on every compile)
 db/
 incremental_db/
 output_files/
+greybox_tmp/
 *.qws
-c5_pin_model_dump.txt
 *.bak
+*.rpt
+*.summary
+*.smsg
+c5_pin_model_dump.txt
+PLLJ_PLLSPE_INFO.txt
+
+# ModelSim / NativeLink simulation output (regenerated on every run)
+simulation/
+work/
+*.wlf
+transcript
+*.vstf

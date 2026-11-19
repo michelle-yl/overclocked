@@ -46,12 +46,6 @@ module timer_tb();
         end
     endtask
 
-    task show(input [8*40:1] label);
-        begin
-            $display("%0s: %0d:%0d%0d  timeup = %b", label, min, tens, ones, timeup);
-        end
-    endtask
-
     initial begin
 
         // Reset
@@ -60,36 +54,27 @@ module timer_tb();
         #100;
         resetn = 1'b1;
         @(posedge CLOCK_50);
-        show("Start      (expect 2:00)");
-
+        // Check: Start      (expect 2:00)
         seconds(1);
-        show("After 1 s  (expect 1:59)");
-
+        // Check: After 1 s  (expect 1:59)
         seconds(9);
-        show("After 10 s (expect 1:50)");
-
+        // Check: After 10 s (expect 1:50)
         seconds(50);
-        show("After 60 s (expect 1:00)");
-
+        // Check: After 60 s (expect 1:00)
         seconds(1);
-        show("After 61 s (expect 0:59)");
-
+        // Check: After 61 s (expect 0:59)
         seconds(58);
-        show("After 119 s (expect 0:01)");
-
+        // Check: After 119 s (expect 0:01)
         seconds(1);
-        show("After 120 s (expect 0:00, timeup 1)");
-
+        // Check: After 120 s (expect 0:00, timeup 1)
         seconds(5);
-        show("After 125 s (expect still 0:00)");
-
+        // Check: After 125 s (expect still 0:00)
         // Reset goes back to 2:00
         resetn = 1'b0;
         @(posedge CLOCK_50);
         resetn = 1'b1;
         @(posedge CLOCK_50);
-        show("After reset (expect 2:00)");
-
+        // Check: After reset (expect 2:00)
         $stop;
     end
 

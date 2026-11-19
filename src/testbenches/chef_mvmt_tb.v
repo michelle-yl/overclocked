@@ -45,14 +45,6 @@ module chef_mvmt_tb();
         end
     endtask
 
-    // Print the chef's position
-    task show(input [8*40:1] label);
-        begin
-            $display("%0s: pixel (%0d, %0d), tile (%0d, %0d), state = %b",
-                     label, chefx, chefy, tilex, tiley, DUT.state);
-        end
-    endtask
-
     initial begin
 
         // Reset
@@ -62,32 +54,32 @@ module chef_mvmt_tb();
         #100;
         resetn = 1'b1;
         wait_ticks(1);
-        show("1. After reset (expect tile 2,5)");
+        // expect tile 2,5
 
         // Tap right and release early: the step still finishes
         right = 1;
         wait_ticks(3);
         right = 0;
         wait_ticks(8);
-        show("2. Tap right (expect tile 3,5)");
+        // expect tile 3,5
 
         // Hold up: moves one tile, then the crate row blocks it
         up = 1;
         wait_ticks(20);
         up = 0;
-        show("3. Hold up (expect tile 3,4)");
+        // expect tile 3,4
 
         // Up again: blocked by the counter row
         up = 1;
         wait_ticks(10);
         up = 0;
-        show("4. Up again (expect still 3,4)");
+        // expect still 3,4
 
         // Up and right together: up has priority, and up is blocked
         up = 1; right = 1;
         wait_ticks(10);
         up = 0; right = 0;
-        show("5. Up + right (expect still 3,4)");
+        // expect still 3,4
 
         // Walk down 2 and right 3 to tile (6,6), next to the assembly counter
         down = 1;
@@ -98,14 +90,13 @@ module chef_mvmt_tb();
         wait_ticks(27);
         right = 0;
         wait_ticks(2);
-        show("6. Down 2, right 3 (expect tile 6,6)");
+        // expect tile 6,6
 
         // Down into the assembly counter at row 7: blocked
         down = 1;
         wait_ticks(10);
         down = 0;
-        show("7. Down into counter (expect still 6,6)");
-
+        // expect still 6,6
         $stop;
     end
 
