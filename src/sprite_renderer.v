@@ -21,6 +21,7 @@ module sprite_renderer (
     parameter IDLE = 2'b00;
     parameter ERASE = 2'b01;
     parameter DRAW = 2'b10;
+    parameter CLEAR = 2'b11;   // repaint the whole background after reset
 
     reg [1:0] state;
 
@@ -37,6 +38,10 @@ module sprite_renderer (
 
     // Tells us whether the chef has already been drawn
     reg sprite_drawn;
+
+    // Screen position while clearing the whole background
+    reg [8:0] clear_x;
+    reg [7:0] clear_y;
 
     // Memories containing the chef image and transparency
     (* ram_init_file = "assets/chef_sprite.mif" *)
@@ -64,8 +69,11 @@ module sprite_renderer (
     wire [9:0] current_x;
     wire [8:0] current_y;
 
-    assign current_x = {1'b0, base_x} + {5'b0, pixel_count[4:0]};
-    assign current_y = {1'b0, base_y} + {4'b0, pixel_count[9:5]};
+    // While clearing, sweep every pixel of the screen instead
+    assign current_x = (state == CLEAR) ? {1'b0, clear_x} :
+                       {1'b0, base_x} + {5'b0, pixel_count[4:0]};
+    assign current_y = (state == CLEAR) ? {1'b0, clear_y} :
+                       {1'b0, base_y} + {4'b0, pixel_count[9:5]};
 
     // Check that the pixel is inside the 320x240 screen
     wire pixel_on_screen;
@@ -104,9 +112,9 @@ module sprite_renderer (
             pixel_x_reg <= current_x[8:0];
             pixel_y_reg <= current_y[7:0];
 
-            // Only output pixels while drawing or erasing
+            // Only output pixels while drawing, erasing, or clearing
             pixel_valid_reg <=
-                (state == ERASE || state == DRAW) && pixel_on_screen;
+                (state == ERASE || state == DRAW || state == CLEAR) && pixel_on_screen;
 
             drawing_reg <= (state == DRAW);
         end
@@ -127,8 +135,10 @@ module sprite_renderer (
     // Control when to draw and erase the chef
     always @(posedge CLOCK_50) begin
         if (!resetn) begin
-            state <= IDLE;
+            state <= CLEAR;            // repaint the background first
             pixel_count <= 0;
+            clear_x <= 0;
+            clear_y <= 0;
 
             old_x <= 0;
             old_y <= 0;
@@ -182,8 +192,18 @@ module sprite_renderer (
                 end
             end
 
-            else begin
-                state <= IDLE;
+            // Repaint every pixel from background_memory, row by row
+            else if (state == CLEAR) begin
+                if (clear_x == 9'd319) begin
+                    clear_x <= 0;
+                    if (clear_y == 8'd239)
+                        state <= IDLE;     // done; IDLE then draws the chef
+                    else
+                        clear_y <= clear_y + 1'b1;
+                end
+                else begin
+                    clear_x <= clear_x + 1'b1;
+                end
             end
         end
     end

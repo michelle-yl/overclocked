@@ -45,11 +45,26 @@ module top (CLOCK_50, SW, KEY, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, LEDR,
     wire [4:0] tilex;           // tile column, 0-19
     wire [3:0] tiley;           // tile row, 0-14
 
+    // Game timer digits (BCD)
+    wire [3:0] t_min, t_tens, t_ones;
+    wire timeup;                // 1 at 0:00
+
+    // ---------------- Reset ----------------
+    // Registers start at 0 when the board is programmed, so startup_count
+    // holds the design in reset for 15 clocks to load the real start values.
+    // After that, KEY[0] resets everything (active low).
+    reg [3:0] startup_count = 4'd0;
+    always @(posedge CLOCK_50)
+        if (startup_count != 4'd15)
+            startup_count <= startup_count + 1'b1;
+
+    wire resetn = KEY[0] & (startup_count == 4'd15);
+
     // ---------------- Modules ----------------
     // Read keyboard input and track which keys are held down
     keyboard_input keyboard (
         .CLOCK_50(CLOCK_50),
-        .resetn(KEY[0]),
+        .resetn(resetn),
         .PS2_CLK(PS2_CLK),
         .PS2_DAT(PS2_DAT),
         .move_up(move_up),
@@ -63,7 +78,7 @@ module top (CLOCK_50, SW, KEY, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, LEDR,
     // Game tick (60/90 Hz) and 1 second tick
     tickgen ticks (
         .clk(CLOCK_50),
-        .clr(KEY[0]),
+        .clr(resetn),
         .overclk(overclock),
         .gametick(gametick),
         .tick1s(tick1s)
@@ -72,7 +87,7 @@ module top (CLOCK_50, SW, KEY, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, LEDR,
     // Chef movement on the 16 px tile grid
     movechef chef (
         .clk(CLOCK_50),
-        .clr(KEY[0]),
+        .clr(resetn),
         .gametick(gametick),
         .up(move_up),
         .down(move_down),
@@ -84,10 +99,21 @@ module top (CLOCK_50, SW, KEY, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, LEDR,
         .tiley(tiley)
     );
 
+    // 2:00 countdown game timer
+    timer gtimer (
+        .clk(CLOCK_50),
+        .clr(resetn),
+        .tick1s(tick1s),
+        .min(t_min),
+        .tens(t_tens),
+        .ones(t_ones),
+        .timeup(timeup)
+    );
+
     // Kitchen background with the chef drawn on top
     vga_background background (
         .CLOCK_50(CLOCK_50),
-        .KEY(KEY),
+        .KEY({KEY[3:1], resetn}),
         .LEDR(),
         .VGA_R(VGA_R),
         .VGA_G(VGA_G),
@@ -101,22 +127,26 @@ module top (CLOCK_50, SW, KEY, HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, LEDR,
         .player_y(chefy)
     );
 
-    // ---------------- Debug outputs ----------------
-    // HEX1-0: chef tile x (hex), HEX2: chef tile y (hex), others off
-    hex7seg hx0 (.in(tilex[3:0]),       .out(HEX0));
-    hex7seg hx1 (.in({3'b000, tilex[4]}), .out(HEX1));
-    hex7seg hx2 (.in(tiley),            .out(HEX2));
-    assign HEX3 = 7'h7F;                // all segments off (active low)
-    assign HEX4 = 7'h7F;
-    assign HEX5 = 7'h7F;
+    // ---------------- HEX displays ----------------
+    // HEX5-3: game time, m ss
+    hex7seg hx5 (.in(t_min),  .out(HEX5));
+    hex7seg hx4 (.in(t_tens), .out(HEX4));
+    hex7seg hx3 (.in(t_ones), .out(HEX3));
 
-    // LEDR: which keys are held
+    // HEX2: chef tile y (hex), HEX1-0: chef tile x (hex), for debugging
+    hex7seg hx2 (.in(tiley),              .out(HEX2));
+    hex7seg hx1 (.in({3'b000, tilex[4]}), .out(HEX1));
+    hex7seg hx0 (.in(tilex[3:0]),         .out(HEX0));
+
+    // ---------------- LEDs ----------------
+    // LEDR[5:0]: which keys are held, LEDR[9]: time is up
     assign LEDR[0] = move_up;
     assign LEDR[1] = move_down;
     assign LEDR[2] = move_left;
     assign LEDR[3] = move_right;
     assign LEDR[4] = interact;
     assign LEDR[5] = overclock;
-    assign LEDR[9:6] = 4'b0000;
+    assign LEDR[8:6] = 3'b000;
+    assign LEDR[9] = timeup;
 
 endmodule
