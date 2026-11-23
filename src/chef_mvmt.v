@@ -14,21 +14,20 @@ reg state;
 reg [1:0] stepdir;
 reg [2:0] stepcount;
 
-assign tilex = chefx[8:4];
+assign tilex = chefx[8:4]; //converts pixels into tiles, each tile is 16 pixels each
 assign tiley = chefy[7:4];
 
 // where to next?
 wire want = up | down | left | right;
-wire [1:0] go = up? UP: down? DOWN: left? LEFT: RIGHT;
+wire [1:0] go = up? UP: down? DOWN: left? LEFT: RIGHT; //direction priority, if both are pressed up occurs first 
 
-wire [4:0] nextx = (go == LEFT)? tilex - 1 : (go == RIGHT)? tilex + 1: tilex;
+wire [4:0] nextx = (go == LEFT)? tilex - 1 : (go == RIGHT)? tilex + 1: tilex; //where chef wants to move based on w a s d
 wire [3:0] nexty = (go == UP)? tiley - 1 : (go == DOWN)? tiley + 1: tiley;
 
 // is this next tile floor?
-wire floor =  (nextx >= 1 && nextx <= 18 && nexty >= 4 && nexty <= 10)
-            && !(nexty == 7 && nextx >= 6 && nextx <= 13);
+wire floor =  (nextx >= 1 && nextx <= 18 && nexty >= 4 && nexty <= 10) && !(nexty == 7 && nextx >= 6 && nextx <= 13); //defines whihc tiles the chef can enter 
 
-always @(posedge clk)
+always @(posedge clk) //movement FSM
 begin
     // reset
     if (!clr)
@@ -46,16 +45,16 @@ begin
         begin
             if (want && floor)
             begin
-                state <= MOVE;
-                stepdir <= go;
+                state <= MOVE; 
+                stepdir <= go; //direction
                 stepcount <= 0;
             end
         end
         MOVE:
         begin
-            // move 2 pixels in the direction we want
-            case (stepdir)
-            UP: chefy <= chefy - 2;
+            // move 2 pixels per tick
+            case (stepdir) 
+            UP: chefy <= chefy - 2; 
             DOWN: chefy <= chefy + 2;
             LEFT: chefx <= chefx - 2;
             RIGHT: chefx <= chefx + 2;

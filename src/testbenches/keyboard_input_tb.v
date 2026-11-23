@@ -48,9 +48,9 @@ module keyboard_input_tb();
         #100;
         PS2_DAT = 1'b0;
         #2000;
-        PS2_CLK = 1'b0;
+        PS2_CLK = 1'b0; //generate a falling edge
         #2000;
-        PS2_CLK = 1'b1;
+        PS2_CLK = 1'b1; //generate a rising edge
 
         // Data bit 0: 1
         #2000;
@@ -146,12 +146,12 @@ module keyboard_input_tb();
 
         #10000;
 
-        $stop;
-
+        $stop; //simulation command
+ 
     end
 
     // Instantiate the keyboard module
-    keyboard_input U1 (
+    keyboard_input U1 ( //connects keyboard ps2dat signals to input ps2dat signals etc
         .CLOCK_50(CLOCK_50),
         .resetn(resetn),
         .PS2_CLK(PS2_CLK),

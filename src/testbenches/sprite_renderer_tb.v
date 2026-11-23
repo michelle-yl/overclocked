@@ -32,21 +32,21 @@ module sprite_renderer_tb();
 
         // Reset the renderer and set the starting position
         resetn = 1'b0;
-        player_x = 9'd32;
-        player_y = 8'd80;
+        player_x = 9'd32; //x = 32
+        player_y = 8'd80; //y = 80
 
         #100;
-        resetn = 1'b1;
+        resetn = 1'b1; //releases reset 
 
         // TEST 1: Initial chef drawing
-        // Allow time to rebuild all 320x240 background pixels
+        // Allow time to draw
         // and draw the chef at (32, 80)
-        #2000000;
+        #2000000; 
 
         // TEST 2: Change chef position
         // The renderer should erase the old chef
         // and draw the chef at (64, 80)
-        player_x = 9'd64;
+        player_x = 9'd64; //moving chef to these coordinates
         player_y = 8'd80;
 
         #1000000;

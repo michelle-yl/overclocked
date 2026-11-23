@@ -10,7 +10,7 @@ module vga_controller(vga_clock, resetn, pixel_color, memory_address,
 		VGA_HS, VGA_VS, VGA_BLANK_N,
 		VGA_SYNC_N, VGA_CLK);
 	
-    // The VGA resolution, which can be set to "640x480", "320x240", and "160x120"
+    // The VGA resolution, which can be set to "640x480", "320x240", and "160x120" //these r overrided due to vgaadapter.v defparam statements
     parameter RESOLUTION = "160x120";
 	parameter COLOR_DEPTH = 3;          // color depth for the video memory
     parameter nX = 8, nY = 7, Mn = 15;  // default bit widths
@@ -73,14 +73,14 @@ module vga_controller(vga_clock, resetn, pixel_color, memory_address,
 	begin
 		if (!resetn)
 			xCounter <= 10'd0;
-		else if (xCounter_clear)
+		else if (xCounter_clear) //if horz line is finished return to 0 
 			xCounter <= 10'd0;
 		else
 		begin
-			xCounter <= xCounter + 1'b1;
+			xCounter <= xCounter + 1'b1; //increase by one 
 		end
 	end
-	assign xCounter_clear = (xCounter == (C_HORZ_TOTAL_COUNT-1));
+	assign xCounter_clear = (xCounter == (C_HORZ_TOTAL_COUNT-1)); //every 800 pixel clock period is one horz line
 
 	/* A counter to scan vertically, indicating the row currently being drawn. */
 	always @(posedge vga_clock or negedge resetn)
@@ -89,7 +89,7 @@ module vga_controller(vga_clock, resetn, pixel_color, memory_address,
 			yCounter <= 10'd0;
 		else if (xCounter_clear && yCounter_clear)
 			yCounter <= 10'd0;
-		else if (xCounter_clear)		//Increment when x counter resets
+		else if (xCounter_clear)		//Increment when x counter finishes
 			yCounter <= yCounter + 1'b1;
 	end
 	assign yCounter_clear = (yCounter == (C_VERT_TOTAL_COUNT-1)); 
@@ -99,7 +99,7 @@ module vga_controller(vga_clock, resetn, pixel_color, memory_address,
 	 * depending on the resolution. */
 	always @(*)
 	begin
-        x = xCounter[9:(RESOLUTION == "640x480") ? 0 : ((RESOLUTION == "320x240") ? 1 : 2)];
+        x = xCounter[9:(RESOLUTION == "640x480") ? 0 : ((RESOLUTION == "320x240") ? 1 : 2)]; //converting physical coordinates into game ones
         y = yCounter[8:(RESOLUTION == "640x480") ? 0 : ((RESOLUTION == "320x240") ? 1 : 2)];
 	end
 	
@@ -116,14 +116,14 @@ module vga_controller(vga_clock, resetn, pixel_color, memory_address,
 	begin
 		//- Sync Generator (ACTIVE LOW)
 		VGA_HS1 <= ~((xCounter >= C_HORZ_SYNC_START) && (xCounter <= C_HORZ_SYNC_END));
-		VGA_VS1 <= ~((yCounter >= C_VERT_SYNC_START) && (yCounter <= C_VERT_SYNC_END));
+		VGA_VS1 <= ~((yCounter >= C_VERT_SYNC_START) && (yCounter <= C_VERT_SYNC_END)); 
 		
 		//- Current X and Y is valid pixel range
 		VGA_BLANK1 <= ((xCounter < C_HORZ_NUM_PIXELS) && (yCounter < C_VERT_NUM_PIXELS));	
 	
-		//- Add 1 cycle delay
-		VGA_HS <= VGA_HS1;
-		VGA_VS <= VGA_VS1;
+		//- Add 1 cycle delay 
+		VGA_HS <= VGA_HS1; //calculates sync value
+		VGA_VS <= VGA_VS1; //applies a delay
 		VGA_BLANK_N <= VGA_BLANK1;	
 	end
 	

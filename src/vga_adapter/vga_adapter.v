@@ -50,8 +50,8 @@ module vga_adapter( resetn, clock, color, x, y, write,
     parameter COLOR_DEPTH = 9;  // default
     
     // Number of VGA pixel X coordinate (column) and Y coordinate (row) bits
-    parameter nX = (RESOLUTION == "640x480") ? 10 : ((RESOLUTION == "320x240") ? 9 : 8);
-    parameter nY = (RESOLUTION == "640x480") ? 9 : ((RESOLUTION == "320x240") ? 8 : 7);
+    parameter nX = (RESOLUTION == "640x480") ? 10 : ((RESOLUTION == "320x240") ? 9 : 8); //used 
+    parameter nY = (RESOLUTION == "640x480") ? 9 : ((RESOLUTION == "320x240") ? 8 : 7); //used 
 
     // Number of address bits on the video memory
     parameter Mn = (RESOLUTION == "640x480") ? 19 : ((RESOLUTION == "320x240") ? 17 : 15);
@@ -66,7 +66,7 @@ module vga_adapter( resetn, clock, color, x, y, write,
      * screen and is placed in the video memory when the FPGA is programmed. Note that resetting
      * the VGA Adapter does NOT cause the video memory to be reloaded from the MIF file. */
 
-    // Declare inputs and outputs
+    // Declare inputs and outputs from vga_background.v
     input wire resetn;
     input wire clock;
     
@@ -131,13 +131,12 @@ module vga_adapter( resetn, clock, color, x, y, write,
         defparam user_input_translator.Mn = Mn;
         // Convert X, Y coordinates into a memory address
 
-    assign valid_address = ({1'b0, x} >= 0) & ({1'b0, x} < COLS) & ({1'b0, y} >= 0) &
-                           ({1'b0, y} < ROWS);
+    assign valid_address = ({1'b0, x} >= 0) & ({1'b0, x} < COLS) & ({1'b0, y} >= 0) & ({1'b0, y} < ROWS); //checks that x and y are within image boundaries
     assign writeEn = write & valid_address;
     // write the user's pixel if the (x,y) coordinates supplied are in a valid range
     
     // Create the dual-port video memory
-    altsyncram VideoMemory (
+    altsyncram VideoMemory ( //stores all the colors of the pixxels being displated 
         .wren_a (writeEn),      // write enable for port a
         .wren_b (gnd),          // write enable for port b
         .clock0 (clock),        // write clock
@@ -164,15 +163,15 @@ module vga_adapter( resetn, clock, color, x, y, write,
         VideoMemory.clock_enable_input_b = "BYPASS",
         VideoMemory.clock_enable_output_b = "BYPASS",
         VideoMemory.power_up_uninitialized = "FALSE",
-        VideoMemory.init_file = BACKGROUND_IMAGE;
+        VideoMemory.init_file = BACKGROUND_IMAGE; //loads kitchen.mif file into video memory during fpga config
         
     /* This module generates a VGA clock with half the frequency of the input clock. For the 
      * VGA adapter to operate correctly the clock signal 'clock' must be a 50MHz clock. The 
      * derived clock, which will then operate at 25MHz, sets the VGA monitor into the 
      * 640 x 480 @60Hz display mode (also known as "VGA mode"). */
-    vga_pll mypll(clock, clock_25);
+    vga_pll mypll(clock, clock_25); //recievies 50MHz clock outputs 25MHz
     
-    vga_controller controller(
+    vga_controller controller( //determins which pizel should aooear on moniotr, generates memoery address, receieves color reads, sends rgb and sync signals to monitor
             .vga_clock(clock_25),            // VGA clock
             .resetn(resetn),
             .pixel_color(to_ctrl_color),     // pixel color, read from video memory

@@ -31,12 +31,12 @@ module vga_background_tb();
     initial begin
 
         // Reset the VGA module
-        KEY = 4'b1110;
-        player_x = 9'd32;
+        KEY = 4'b1110; //active low 1110 means reset is pressed
+        player_x = 9'd32; //starting pos at (32, 80)
         player_y = 8'd80;
 
         #100;
-        KEY = 4'b1111;
+        KEY = 4'b1111; //reset released
 
         // Let the VGA controller run
         #2000000;
