@@ -30,7 +30,7 @@ module keyboard_input (
     always @(posedge CLOCK_50) begin // at rising edges of FPGA clock 
         ps2_clk1 <= PS2_CLK; //reads current value of ps2clk and stores
         ps2_clk2 <= ps2_clk1; //recieives previous value of ps2clk1
-        prev_ps2_clk <= ps2_clk //stores previous clock value of ps/2 used for detecting falling edges  of ps2clck
+        prev_ps2_clk <= ps2_clk2; //stores previous clock value of ps/2 used for detecting falling edges  of ps2clck
 
         ps2_dat1 <= PS2_DAT; //reads value of bit and stores
         ps2_dat2 <= ps2_dat1; //holds synced up value
