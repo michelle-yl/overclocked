@@ -67,6 +67,13 @@ module top (
     wire [3:0] t_min, t_tens, t_ones;
     wire timeup;                // 1 when timer reaches 0:00
 
+    // NEW: Overclock heat
+    wire boost;                 // overclock active (from heat FSM), speeds up gametick
+    wire [4:0] heat;            // 0-31
+    wire heat_warn;             // heat is 24 or more
+    wire meltdown;              // one-clock pulse when heat reaches 31
+    wire playing;               // game still running (not time up, not melted)
+
     // NEW: Milestone 2 - Order management
     wire [1:0] order_id;        // Current burger recipe (0-3)
     wire [2:0] required_ingredients;
@@ -113,11 +120,12 @@ module top (
 
     // ---------------- Game timing ----------------
 
-    // Game tick (60/90 Hz) and one-second tick
+    // Game tick (60/90 Hz) and one-second tick.
+    // Speed comes from the heat FSM, not the raw key, so heat can cut it off.
     tickgen ticks (
         .clk(CLOCK_50),
         .clr(resetn),
-        .overclk(overclock),
+        .overclk(boost),
         .gametick(gametick),
         .tick1s(tick1s)
     );
@@ -142,27 +150,56 @@ module top (
 
     // ---------------- Game timer ----------------
 
-    // 2:00 countdown game timer
+    // 2:00 countdown game timer.
+    // Stops counting after a meltdown, so HEX shows the time left.
     timer gtimer (
         .clk(CLOCK_50),
         .clr(resetn),
-        .tick1s(tick1s),
+        .tick1s(tick1s & playing),
         .min(t_min),
         .tens(t_tens),
         .ones(t_ones),
         .timeup(timeup)
     );
 
+    // ---------------- Overclock heat ----------------
+
+    // TEMPORARY until game_fsm
+    reg melted;
+
+    always @(posedge CLOCK_50) begin
+        if (!resetn)
+            melted <= 0;
+        else if (meltdown)
+            melted <= 1;
+    end
+
+    assign playing = !timeup && !melted;
+
+    // Overclock FSM and heat counter.
+    // Heat +4 per second while boosting, -2 per second otherwise.
+    trackheat heater (
+        .clk(CLOCK_50),
+        .resetn(resetn),
+        .tick1s(tick1s),
+        .key(overclock),
+        .inplay(playing),
+        .overclk(boost),
+        .heat(heat),
+        .warning(heat_warn),
+        .meltdown(meltdown)
+    );
+
     // ---------------- Milestone 2: Space press ----------------
 
     // Turn the held Space level into one press per keydown,
-    // delivered on the next gametick, and none after 0:00.
+    // delivered on the next gametick, and none once the game is over.
     ctrlinput spacepress (
         .clk(CLOCK_50),
         .resetn(resetn),
         .interact(interact),
         .gametick(gametick),
-        .timeup(timeup),
+        .timeup(!playing),
         .space(space)
     );
 
@@ -281,7 +318,7 @@ module top (
         .required_ingredients(required_ingredients),
 
         // NEW: Temporary heat value for testing the graphic
-        .heat_level(SW[8:3]) //change to heat signal based on Michelle's heat bar code 
+        .heat_level({heat, 1'b0})   // heat 0-31 doubled for the 64 px bar
     );
 
     // ---------------- HEX displays ----------------
@@ -343,10 +380,12 @@ module top (
     // LEDR[2:0] = held item (defs.vh: 0 empty, 1 bun, 2 lettuce,
     //             3 raw, 4 cooked, 5 burnt)
     // LEDR[4:3] = stove state (0 empty, 1 cooking, 2 cooked, 3 burnt)
-    // LEDR[5]   = overclock key held
+    // LEDR[5]   = overclock active (boost)
+    // LEDR[6]   = meltdown happened (stays on until reset)
+    // LEDR[9]   = heat warning (24+); stays on after a meltdown since heat stays 31
     assign LEDR[2:0] = held;
     assign LEDR[4:3] = stove_state;
-    assign LEDR[5] = overclock;
+    assign LEDR[5] = boost;
 
     // NEW: Milestone 2 - Remember the last submission result
     //
@@ -372,9 +411,9 @@ module top (
         end
     end
 
-    assign LEDR[6] = interact;          // Space held
+    assign LEDR[6] = melted;
     assign LEDR[7] = last_incorrect;
     assign LEDR[8] = last_correct;
-    assign LEDR[9] = timeup;
+    assign LEDR[9] = heat_warn;
 
 endmodule

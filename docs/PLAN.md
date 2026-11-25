@@ -96,9 +96,9 @@ All are parameters, so playtesting can change them. Cook and burn run as 16 prog
 | Cook | 16 steps × 19 ticks | 5.07 s |
 | Burn | 16 steps × 19 ticks | 5.07 s |
 | Game length | 120 s | 120 s |
-| Heat rise while boosting | +1 every 0.25 s | 7.75 s from 0 to 31 |
-| Heat fall otherwise | −1 every 0.5 s | 15.5 s from 31 to 0 |
-| Heat warning | 24 of 31 | About 1.75 s of boost left |
+| Heat rise while boosting | +4 every 1 s | 8 s from 0 to 31 |
+| Heat fall otherwise | −2 every 1 s | 16 s from 31 to 0 |
+| Heat warning | 24 of 31 | About 2 s of boost left |
 
 Cook and burn are slightly off 5 s because the step count has to be a whole number of ticks. Chef, cook, and burn values are for normal speed; Section 3.8 lists the boosted times.
 
@@ -188,9 +188,12 @@ Holding the overclock key (`Z`) raises the game tick from 60 to 90 Hz, so the wh
 
 **Heat.** `heat` is a 5-bit saturating up/down counter, from 0 to 31, updated on real-time pulses so its rate never depends on the game tick.
 
-- **Boosting:** +1 on every `tick_4hz` pulse, so 0 to 31 takes 7.75 s.
-- **Not boosting:** −1 on every second `tick_4hz` pulse, stopping at 0, so 31 to 0 takes 15.5 s.
-- **Warning, 24 or more:** the heat bar flashes and `LEDR[9]` blinks, with about 1.75 s of boost left. The check is only that the top two bits of `heat` are both 1.
+- **Boosting:** +4 (`RISE`) on every `tick_1s` pulse, stopping at 31, so 0 to 31 takes 8 s.
+- **Not boosting:** −2 (`FALL`) on every `tick_1s` pulse, stopping at 0, so 31 to 0 takes 16 s.
+- **Saturation:** a step can overshoot, so rising sets 31 when `heat > 31 − RISE`, and falling sets 0 when `heat < FALL`. Without this, 30 + 4 would wrap to 2.
+- **Warning, 24 or more:** the heat bar flashes and `LEDR[9]` blinks, with about 2 s of boost left. The check is only that the top two bits of `heat` are both 1.
+
+Heat uses the existing `tick_1s` instead of a separate 4 Hz pulse, so `tick_gen` needs no extra counter. The cost is that the bar moves in visible jumps once a second. If that looks too choppy in playtesting, add a faster fixed tick and smaller steps.
 - **Meltdown, 31:** the game freezes at once, the same way it does at 0:00. The score stands, and reset starts a new game.
 
 There are no end screens, so a meltdown is shown by three things: the heat bar stays full, `LEDR[9]` stays on, and HEX5-3 stops above 0:00.
@@ -246,14 +249,14 @@ The overclock path connects to the blocks above like this:
 ```
  overclock key -> [input_ctrl] -> [heat_ctrl] -- boost --> [tick_gen] -> game_tick, 60 or 90 Hz
                                        ^   |
-                 tick_4hz, playing ----+   +-- heat, heat_warn --> renderer, LEDR
+                 tick_1s, playing -----+   +-- heat, heat_warn --> renderer, LEDR
                                            +-- meltdown -------> [game_fsm]
 ```
 
 Four design rules keep this manageable, and they are worth stating on your slides.
 
 1. **One clock.** Everything runs on `CLOCK_50`. Slow events are one-cycle enable pulses, the same way `onesec` works in `lab4/part3.v`.
-2. **Game-speed state changes only on `game_tick`.** Chef movement, the stove, and interactions advance on this pulse, at 60 or 90 Hz. The game timer and heat advance on the fixed `tick_1s` and `tick_4hz` pulses, so overclock can't stretch them. Key presses are latched until the next `game_tick`, so the game runs in deterministic steps and is easy to simulate.
+2. **Game-speed state changes only on `game_tick`.** Chef movement, the stove, and interactions advance on this pulse, at 60 or 90 Hz. The game timer and heat advance on the fixed `tick_1s` pulse, so overclock can't stretch them. Key presses are latched until the next `game_tick`, so the game runs in deterministic steps and is easy to simulate.
 3. **The renderer only reads game state.** It never changes it, so the two halves can be built in parallel against the bus in Section 6.1.
 4. **Repaint every pixel, every frame.** There is no erase-and-redraw step (Section 5.2).
 
@@ -364,7 +367,7 @@ Score and time go straight to the HEX displays, so they aren't on this bus.
 | Module | Purpose | Type | Owner |
 |---|---|---|---|
 | `overclocked_top` | Pin-level top, wiring | Structural | Both |
-| `tick_gen` | `game_tick` (60 or 90 Hz), `frame_60`, `tick_1s`, and `tick_4hz` enable pulses | Counters | B |
+| `tick_gen` | `game_tick` (60 or 90 Hz) and `tick_1s` enable pulses | Counters | B |
 | `kbd_decoder` | Scan bytes to held-key flags | Sequence detector FSM | B |
 | `input_ctrl` | Synchronize KEY/SW, keyboard or KEY/SW select, press edges, latch until tick | Registers | B |
 | `chef_move` | Position, tile-step logic | FSM + datapath | B |
@@ -511,7 +514,7 @@ Follow your lab flow: `testbench.v` and `wave.do` in a ModelSim folder per modul
 
 | Module | Key test cases |
 |---|---|
-| `tick_gen` | Pulses are exactly one clock wide, at the correct period; `game_tick` changes between 60 and 90 Hz only at a wrap, with no missed or double pulse; `frame_60`, `tick_1s`, and `tick_4hz` don't change with `boost` |
+| `tick_gen` | Pulses are exactly one clock wide, at the correct period; `game_tick` changes between 60 and 90 Hz only at a wrap, with no missed or double pulse; `tick_1s` doesn't change with `boost` |
 | `kbd_decoder` | Arrow press and release, Space, `Z`, repeated press bytes, unknown codes ignored, `E0 F0` sequences, idle gaps between bytes |
 | `input_ctrl` | One action per press despite key repeat; press between ticks isn't lost; overclock stays active while held |
 | `chef_move` | Moves 16 px per tile step; blocked at walls and counters; new step only starts when aligned |
@@ -521,7 +524,7 @@ Follow your lab flow: `testbench.v` and `wave.do` in a ModelSim folder per modul
 | `order_mgr` | Match loads the next order, no match keeps the current order, no changes after game over |
 | `score_bcd` | Carry at 90 + 10, saturates at 990 |
 | `game_timer` | 2:00 to 1:59, 1:00 to 0:59, stops at 0:00 |
-| `heat_ctrl` | Rises every `tick_4hz` while boosting; falls every second pulse otherwise; stops at 0; `heat_warn` from 24; one `meltdown` pulse at 31; ignores the key once frozen |
+| `heat_ctrl` | +4 per `tick_1s` while boosting, −2 otherwise; saturates at 31 and 0 without wrapping; boost cuts out at 31; `heat_warn` from 24; one `meltdown` pulse when 31 is reached; ignores the key once frozen |
 | `game_fsm` | Timeout and meltdown both stop play; Time Up wins on the same clock; reset clears all state, including `heat` |
 | `tile_rom`, `map_rom` | Known addresses return the `.mif` values; data is valid exactly one clock after the address |
 | `renderer` | Correct `plot` count per frame (76,800); first rows have expected x, y, colour; chef overrides background; transparency works |

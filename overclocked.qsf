@@ -977,6 +977,8 @@ set_global_assignment -name VERILOG_FILE src/timer.v
 set_global_assignment -name VERILOG_FILE src/stations.v
 set_global_assignment -name VERILOG_FILE src/interactions.v
 set_global_assignment -name VERILOG_FILE src/stove.v
+set_global_assignment -name VERILOG_FILE src/heat_tracking.v
+set_global_assignment -name VERILOG_FILE src/input_ctrl.v
 set_global_assignment -name VERILOG_FILE src/vga_adapter/vga_adapter.v
 set_global_assignment -name VERILOG_FILE src/vga_adapter/vga_controller.v
 set_global_assignment -name VERILOG_FILE src/vga_adapter/vga_pll.v
