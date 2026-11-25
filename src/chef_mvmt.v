@@ -1,10 +1,11 @@
-module movechef(clk, clr, gametick, up, down, left, right, chefx, chefy, tilex, tiley);
+module movechef(clk, clr, gametick, up, down, left, right, chefx, chefy, tilex, tiley, idle);
 
 input clk, clr, gametick, up, down, left, right;
 output reg [8:0] chefx;
 output reg [7:0] chefy;
 output [4:0] tilex;
 output [3:0] tiley;
+output idle;
 
 // set starting pos
 parameter IDLE = 1'b0, MOVE = 1'b1, UP = 2'd0, DOWN = 2'd1, LEFT = 2'd2, RIGHT = 2'd3;
@@ -14,6 +15,7 @@ reg state;
 reg [1:0] stepdir;
 reg [2:0] stepcount;
 
+assign idle = (state == IDLE);
 assign tilex = chefx[8:4]; //converts pixels into tiles, each tile is 16 pixels each
 assign tiley = chefy[7:4];
 

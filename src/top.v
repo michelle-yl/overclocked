@@ -48,6 +48,20 @@ module top (
     wire [7:0] chefy;           // Pixel y, 0-239
     wire [4:0] tilex;           // Tile column
     wire [3:0] tiley;           // Tile row
+    wire idle;                  // 1 when chef is standing still on a tile
+
+    // NEW: Milestone 2 - Stations and interactions
+    wire space;                 // one-clock Space press, on a gametick
+    wire [2:0] station;         // station next to the chef (defs.vh codes)
+    wire [2:0] held;            // item in the chef's hands (defs.vh codes)
+    wire [2:0] plate;           // {lettuce, meat, bun} on the assembly plate
+    wire serve;                 // one-clock pulse: check the plate
+    wire done;                  // order_verify has answered
+
+    // NEW: Milestone 2 - Stove
+    wire [1:0] stove_state;     // EMPTY, COOKING, COOKED, BURNT
+    wire [3:0] stove_progress;  // 0-15 through the current cook or burn
+    wire [2:0] stove_give;      // what the chef holds after using the stove
 
     // Game timer digits (BCD)
     wire [3:0] t_min, t_tens, t_ones;
@@ -61,6 +75,9 @@ module top (
     wire correct_order;
     wire incorrect_order;
     wire [15:0] score;
+
+    // Shared station / held / stove codes (STOVE is used below)
+    `include "defs.vh"
 
     // ---------------- Reset ----------------
 
@@ -119,7 +136,8 @@ module top (
         .chefx(chefx),
         .chefy(chefy),
         .tilex(tilex),
-        .tiley(tiley)
+        .tiley(tiley),
+        .idle(idle)
     );
 
     // ---------------- Game timer ----------------
@@ -135,70 +153,61 @@ module top (
         .timeup(timeup)
     );
 
-    // ---------------- Milestone 2: Burger input ----------------
+    // ---------------- Milestone 2: Space press ----------------
 
-    // Temporary controls for testing burger submissions:
-    //
-    // SW[0] = bun
-    // SW[1] = meat
-    // SW[2] = lettuce
-    //
-    // KEY[1] = submit burger (active low)
-    //
-    // These controls can later be replaced by the actual
-    // ingredient collection and cooking logic.
+    // Turn the held Space level into one press per keydown,
+    // delivered on the next gametick, and none after 0:00.
+    ctrlinput spacepress (
+        .clk(CLOCK_50),
+        .resetn(resetn),
+        .interact(interact),
+        .gametick(gametick),
+        .timeup(timeup),
+        .space(space)
+    );
 
-    // Synchronize the physical inputs to CLOCK_50
-    reg submit_meta;
-    reg submit_sync;
+    // ---------------- Milestone 2: Stations ----------------
 
-    reg [2:0] ingredients_meta;
-    reg [2:0] ingredients_sync;
+    // Which station the chef is standing at (NONE while mid-step)
+    stations stationfind (
+        .tilex(tilex),
+        .tiley(tiley),
+        .idle(idle),
+        .station(station)
+    );
 
-    always @(posedge CLOCK_50) begin
-        if (!resetn) begin
-            submit_meta <= 0;
-            submit_sync <= 0;
+    // ---------------- Milestone 2: Interactions ----------------
 
-            ingredients_meta <= 0;
-            ingredients_sync <= 0;
-        end
-        else begin
-            // KEY is active low, so invert KEY[1]
-            submit_meta <= ~KEY[1];
-            submit_sync <= submit_meta;
+    // Held item and plate. Crates, plate, and trash rules live here;
+    // the stove's rules live in the stove module (stove_give).
+    assign done = correct_order | incorrect_order;
 
-            // Synchronize the three ingredient switches
-            ingredients_meta <= SW[2:0];
-            ingredients_sync <= ingredients_meta;
-        end
-    end
+    interactions kitchen (
+        .clk(CLOCK_50),
+        .resetn(resetn),
+        .space(space),
+        .station(station),
+        .stove(stove_give),
+        .done(done),
+        .held(held),
+        .plate(plate),
+        .serve(serve)
+    );
 
-    // ---------------- Submit button debounce ----------------
+    // ---------------- Milestone 2: Stove ----------------
 
-    // Mechanical buttons can bounce when pressed.
-    // Require the input to remain different for about 1 ms
-    // before accepting the new button state.
-
-    reg submit_debounced;
-    reg [15:0] debounce_count;
-
-    always @(posedge CLOCK_50) begin
-        if (!resetn) begin
-            submit_debounced <= 0;
-            debounce_count <= 0;
-        end
-        else if (submit_sync == submit_debounced) begin
-            debounce_count <= 0;
-        end
-        else if (debounce_count == 16'd49999) begin
-            submit_debounced <= submit_sync;
-            debounce_count <= 0;
-        end
-        else begin
-            debounce_count <= debounce_count + 1'b1;
-        end
-    end
+    // Cooks on gametick, so overclock speeds it up.
+    // Only sees presses made while standing at the stove.
+    stove cooker (
+        .clk(CLOCK_50),
+        .resetn(resetn),
+        .gametick(gametick),
+        .space(space && station == STOVE),
+        .held(held),
+        .state(stove_state),
+        .progress(stove_progress),
+        .give(stove_give)
+    );
 
     // ---------------- Milestone 2: Order management ----------------
 
@@ -220,15 +229,14 @@ module top (
 
     // ---------------- Milestone 2: Order verification ----------------
 
-    // Compare the player's submitted ingredients to the
-    // ingredients required by the current order.
-    // Do not accept submissions after the timer reaches zero.
+    // Compare the plate to the ingredients required by the
+    // current order when the chef serves.
 
     order_verify verification (
         .CLOCK_50(CLOCK_50),
         .resetn(resetn),
-        .submit(submit_debounced && !timeup),
-        .submitted_ingredients(ingredients_sync),
+        .submit(serve),                     // already blocked after 0:00 by "space"
+        .submitted_ingredients(plate),
         .required_ingredients(required_ingredients),
         .correct_order(correct_order),
         .incorrect_order(incorrect_order)
@@ -306,33 +314,38 @@ module top (
         .out(HEX3)
     );
 
-    // HEX2: chef tile y
-    // HEX1-0: chef tile x
-    // Keep these for debugging movement.
+    // HEX2-0 debug, selected by SW[9] (same switch as the score):
+    //   SW[9] = 0: HEX2 = chef tile y, HEX1-0 = chef tile x
+    //   SW[9] = 1: HEX2 = plate bits, HEX1 = stove progress, HEX0 = held item
+
+    wire [3:0] hex2_value = SW[9] ? {1'b0, plate}    : tiley;
+    wire [3:0] hex1_value = SW[9] ? stove_progress   : {3'b000, tilex[4]};
+    wire [3:0] hex0_value = SW[9] ? {1'b0, held}     : tilex[3:0];
 
     hex7seg hx2 (
-        .in(tiley),
+        .in(hex2_value),
         .out(HEX2)
     );
 
     hex7seg hx1 (
-        .in({3'b000, tilex[4]}),
+        .in(hex1_value),
         .out(HEX1)
     );
 
     hex7seg hx0 (
-        .in(tilex[3:0]),
+        .in(hex0_value),
         .out(HEX0)
     );
 
     // ---------------- LEDs ----------------
 
-    // Original keyboard debugging LEDs
-    assign LEDR[0] = move_up;
-    assign LEDR[1] = move_down;
-    assign LEDR[2] = move_left;
-    assign LEDR[3] = move_right;
-    assign LEDR[4] = interact;
+    // NEW: Milestone 2 - kitchen debugging LEDs
+    // LEDR[2:0] = held item (defs.vh: 0 empty, 1 bun, 2 lettuce,
+    //             3 raw, 4 cooked, 5 burnt)
+    // LEDR[4:3] = stove state (0 empty, 1 cooking, 2 cooked, 3 burnt)
+    // LEDR[5]   = overclock key held
+    assign LEDR[2:0] = held;
+    assign LEDR[4:3] = stove_state;
     assign LEDR[5] = overclock;
 
     // NEW: Milestone 2 - Remember the last submission result
@@ -359,7 +372,7 @@ module top (
         end
     end
 
-    assign LEDR[6] = 1'b0;
+    assign LEDR[6] = interact;          // Space held
     assign LEDR[7] = last_incorrect;
     assign LEDR[8] = last_correct;
     assign LEDR[9] = timeup;
