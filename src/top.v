@@ -77,7 +77,7 @@ module top (
     // NEW: Milestone 2 - Order management
     wire [1:0] order_id;        // Current burger recipe (0-3)
     wire [2:0] required_ingredients;
-    wire [15:0] lfsr_q;         // free-running pseudo-random value
+    //wire [15:0] lfsr_q;         // free-running pseudo-random value
 
     // NEW: Milestone 2 - Verification and scoring
     wire correct_order;
@@ -259,16 +259,16 @@ module top (
 
     // Free-running random source. Never reset, so the moment the
     // player resets or serves decides which value gets picked.
-    lfsr16b rng (
-        .clk(CLOCK_50),
-        .q(lfsr_q)
-    );
+    //lfsr16b rng (
+      //  .clk(CLOCK_50),
+      //  .q(lfsr_q)
+    //);
 
     order_manager orders (
         .CLOCK_50(CLOCK_50),
         .resetn(resetn),
         .correct_order(correct_order),
-        .randorder(lfsr_q[1:0]),        // next recipe, picked at random
+       // .randorder(lfsr_q[1:0]),        // next recipe, picked at random
         .order_id(order_id),
         .required_ingredients(required_ingredients)
     );
