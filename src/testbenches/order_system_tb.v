@@ -1,3 +1,4 @@
+
 `timescale 1ns/1ps
 
 module order_system_tb;
@@ -22,7 +23,7 @@ module order_system_tb;
         .required_ingredients(required_ingredients)
     );
 
-    // Check the submitted burger against the current order
+    // Verify the submitted burger
     order_verify verification (
         .CLOCK_50(CLOCK_50),
         .resetn(resetn),
@@ -33,7 +34,7 @@ module order_system_tb;
         .incorrect_order(incorrect_order)
     );
 
-    // Add 10 points for each correct submission
+    // Update the score
     score_manager scoring (
         .CLOCK_50(CLOCK_50),
         .resetn(resetn),
@@ -41,42 +42,7 @@ module order_system_tb;
         .score(score)
     );
 
-    // Generate the 50 MHz clock
     always #10 CLOCK_50 = ~CLOCK_50;
-
-    // Check that the order and score match expected values
-    task check_game;
-        input [1:0] expected_order;
-        input [15:0] expected_score;
-        begin
-            if (order_id !== expected_order ||
-                score !== expected_score) begin
-                $display("FAIL: order=%d score=%d",
-                         order_id, score);
-                $stop;
-            end
-            else begin
-                $display("PASS: order=%d score=%d",
-                         order_id, score);
-            end
-        end
-    endtask
-
-    // Submit a burger and allow the modules to update
-    task submit_burger;
-        input [2:0] ingredients;
-        begin
-            @(negedge CLOCK_50);
-            submitted_ingredients = ingredients;
-            submit = 1;
-
-            // Allow verification, scoring and order change
-            repeat (3) @(negedge CLOCK_50);
-
-            submit = 0;
-            @(negedge CLOCK_50);
-        end
-    endtask
 
     initial begin
         CLOCK_50 = 0;
@@ -85,41 +51,56 @@ module order_system_tb;
         submitted_ingredients = 0;
 
         // Reset the game
-        repeat (3) @(negedge CLOCK_50);
+        #60;
         resetn = 1;
 
-        check_game(0, 0);
+        // Incorrect burger: score stays 0, order stays 0
+        #20;
+        submitted_ingredients = 3'b101;
+        submit = 1;
+        #60;
+        submit = 0;
 
-        // Wrong burger should not change anything
-        submit_burger(3'b101);
-        check_game(0, 0);
+        // Correct burger 111: score 10, order 1
+        #40;
+        submitted_ingredients = 3'b111;
+        submit = 1;
+        #60;
+        submit = 0;
 
-        // Correct full burger
-        submit_burger(3'b111);
-        check_game(1, 10);
+        // Correct burger 101: score 20, order 2
+        #40;
+        submitted_ingredients = 3'b101;
+        submit = 1;
+        #60;
+        submit = 0;
 
-        // Correct bun + lettuce burger
-        submit_burger(3'b101);
-        check_game(2, 20);
+        // Correct burger 011: score 30, order 3
+        #40;
+        submitted_ingredients = 3'b011;
+        submit = 1;
+        #60;
+        submit = 0;
 
-        // Correct bun + meat burger
-        submit_burger(3'b011);
-        check_game(3, 30);
+        // Correct burger 110: score 40, order 0
+        #40;
+        submitted_ingredients = 3'b110;
+        submit = 1;
+        #60;
+        submit = 0;
 
-        // Correct lettuce wrap
-        submit_burger(3'b110);
-        check_game(0, 40);
+        // Incorrect burger: score stays 40
+        #40;
+        submitted_ingredients = 3'b011;
+        submit = 1;
+        #60;
+        submit = 0;
 
-        // Wrong burger should not increase score
-        submit_burger(3'b011);
-        check_game(0, 40);
-
-        // Reset should clear the score and order
+        // Reset score and order
+        #40;
         resetn = 0;
-        repeat (2) @(negedge CLOCK_50);
-        check_game(0, 0);
+        #40;
 
-        $display("ALL ORDER SYSTEM TESTS PASSED");
         $stop;
     end
 

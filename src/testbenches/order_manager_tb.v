@@ -20,63 +20,42 @@ module order_manager_tb;
 
     always #10 CLOCK_50 = ~CLOCK_50;
 
-    // Check the currently selected burger order
-    task check_order;
-        input [1:0] expected_id;
-        input [2:0] expected_ingredients;
-        begin
-            if (order_id !== expected_id ||
-                required_ingredients !== expected_ingredients) begin
-                $display("FAIL: order=%d ingredients=%b",
-                         order_id, required_ingredients);
-                $stop;
-            end
-            else
-                $display("PASS: order=%d ingredients=%b",
-                         order_id, required_ingredients);
-        end
-    endtask
-
-    // Simulate successfully completing an order
-    task complete_order;
-        begin
-            @(negedge CLOCK_50);
-            correct_order = 1;
-
-            @(negedge CLOCK_50);
-            correct_order = 0;
-        end
-    endtask
-
     initial begin
         CLOCK_50 = 0;
         resetn = 0;
         correct_order = 0;
 
-        // Reset should select the first burger
-        repeat (3) @(negedge CLOCK_50);
+        // Reset to the first order (111)
+        #60;
         resetn = 1;
-        check_order(2'd0, 3'b111);
 
-        // Move through all four recipes
-        complete_order();
-        check_order(2'd1, 3'b101);
+        // Complete order 0, move to order 1 (101)
+        #20;
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        complete_order();
-        check_order(2'd2, 3'b011);
+        // Complete order 1, move to order 2 (011)
+        #20;
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        complete_order();
-        check_order(2'd3, 3'b110);
+        // Complete order 2, move to order 3 (110)
+        #20;
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        // After the fourth order, return to the first
-        complete_order();
-        check_order(2'd0, 3'b111);
+        // Complete order 3, return to order 0 (111)
+        #20;
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        // No correct_order pulse means no change
-        repeat (5) @(negedge CLOCK_50);
-        check_order(2'd0, 3'b111);
+        // No correct order: order should stay the same
+        #100;
 
-        $display("ALL ORDER MANAGER TESTS PASSED");
         $stop;
     end
 

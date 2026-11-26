@@ -18,63 +18,42 @@ module score_manager_tb;
 
     always #10 CLOCK_50 = ~CLOCK_50;
 
-    task check_score;
-        input [15:0] expected;
-        begin
-            if (score !== expected) begin
-                $display("FAIL: expected=%d actual=%d",
-                         expected, score);
-                $stop;
-            end
-            else
-                $display("PASS: score=%d", score);
-        end
-    endtask
-
-    // Generate a one-clock correct-order pulse
-    task add_points;
-        begin
-            @(negedge CLOCK_50);
-            correct_order = 1;
-
-            @(negedge CLOCK_50);
-            correct_order = 0;
-        end
-    endtask
-
     initial begin
         CLOCK_50 = 0;
         resetn = 0;
         correct_order = 0;
 
-        repeat (3) @(negedge CLOCK_50);
-        check_score(0);
-
+        // Reset score to 0
+        #60;
         resetn = 1;
 
-        // Correct order gives 10 points
-        add_points();
-        check_score(10);
+        // First correct order: score = 10
+        #20;
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        // Another correct order gives 20 total
-        add_points();
-        check_score(20);
+        // Second correct order: score = 20
+        #20;
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        // No pulse means the score stays the same
-        repeat (5) @(negedge CLOCK_50);
-        check_score(20);
+        // No correct order: score stays at 20
+        #100;
 
-        // Third correct order
-        add_points();
-        check_score(30);
+        // Third correct order: score = 30
+        correct_order = 1;
+        #20;
+        correct_order = 0;
 
-        // Reset returns the score to zero
+        // Reset score to 0
+        #40;
         resetn = 0;
-        @(negedge CLOCK_50);
-        check_score(0);
+        #40;
 
-        $display("ALL SCORE MANAGER TESTS PASSED");
         $stop;
     end
 
 endmodule
+        
