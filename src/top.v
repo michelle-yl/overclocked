@@ -77,11 +77,12 @@ module top (
     // NEW: Milestone 2 - Order management
     wire [1:0] order_id;        // Current burger recipe (0-3)
     wire [2:0] required_ingredients;
+    wire [15:0] lfsr_q;         // free-running pseudo-random value
 
     // NEW: Milestone 2 - Verification and scoring
     wire correct_order;
     wire incorrect_order;
-    wire [15:0] score;
+    wire [11:0] score;          // BCD: {hundreds, tens, ones}
 
     // Shared station / held / stove codes (STOVE is used below)
     `include "defs.vh"
@@ -164,7 +165,7 @@ module top (
 
     // ---------------- Overclock heat ----------------
 
-    // TEMPORARY until game_fsm
+    // temp until game_fsm
     reg melted;
 
     always @(posedge CLOCK_50) begin
@@ -249,17 +250,25 @@ module top (
     // ---------------- Milestone 2: Order management ----------------
 
     // Select the current burger recipe.
-    // Advance to the next order after a correct submission.
+    // Pick a new random recipe on reset and after a correct submission.
     //
     // Recipe 0: 111 = bun + meat + lettuce
     // Recipe 1: 101 = bun + lettuce
     // Recipe 2: 011 = bun + meat
     // Recipe 3: 110 = meat + lettuce
 
+    // Free-running random source. Never reset, so the moment the
+    // player resets or serves decides which value gets picked.
+    lfsr16b rng (
+        .clk(CLOCK_50),
+        .q(lfsr_q)
+    );
+
     order_manager orders (
         .CLOCK_50(CLOCK_50),
         .resetn(resetn),
         .correct_order(correct_order),
+        .randorder(lfsr_q[1:0]),        // next recipe, picked at random
         .order_id(order_id),
         .required_ingredients(required_ingredients)
     );
@@ -318,23 +327,23 @@ module top (
         .required_ingredients(required_ingredients),
 
         // NEW: Temporary heat value for testing the graphic
-        .heat_level({heat, 1'b0})   // heat 0-31 doubled for the 64 px bar
+        .heat_level({heat, 1'b0}),  // heat 0-31 doubled for the 64 px bar
+
+        // Item display: held item, stove patty, plate contents
+        .held(held),
+        .stove_state(stove_state),
+        .plate(plate)
     );
 
     // ---------------- HEX displays ----------------
 
-    // HEX5-3 normally show the game timer.
-    //
-    // When SW[9] = 1, they show the score instead.
-    // The score is currently displayed in hexadecimal.
+    // HEX5-3: score, BCD so it reads in decimal (e.g. 120)
+    // HEX2-0: game timer (m ss)
+    //         SW[9] = 1 swaps in debug: plate bits, stove progress, held item
 
-    wire [3:0] hex5_value;
-    wire [3:0] hex4_value;
-    wire [3:0] hex3_value;
-
-    assign hex5_value = SW[9] ? score[11:8] : t_min;
-    assign hex4_value = SW[9] ? score[7:4] : t_tens;
-    assign hex3_value = SW[9] ? score[3:0] : t_ones;
+    wire [3:0] hex5_value = score[11:8];
+    wire [3:0] hex4_value = score[7:4];
+    wire [3:0] hex3_value = score[3:0];
 
     hex7seg hx5 (
         .in(hex5_value),
@@ -351,13 +360,9 @@ module top (
         .out(HEX3)
     );
 
-    // HEX2-0 debug, selected by SW[9] (same switch as the score):
-    //   SW[9] = 0: HEX2 = chef tile y, HEX1-0 = chef tile x
-    //   SW[9] = 1: HEX2 = plate bits, HEX1 = stove progress, HEX0 = held item
-
-    wire [3:0] hex2_value = SW[9] ? {1'b0, plate}    : tiley;
-    wire [3:0] hex1_value = SW[9] ? stove_progress   : {3'b000, tilex[4]};
-    wire [3:0] hex0_value = SW[9] ? {1'b0, held}     : tilex[3:0];
+    wire [3:0] hex2_value = SW[9] ? {1'b0, plate}  : t_min;
+    wire [3:0] hex1_value = SW[9] ? stove_progress : t_tens;
+    wire [3:0] hex0_value = SW[9] ? {1'b0, held}   : t_ones;
 
     hex7seg hx2 (
         .in(hex2_value),

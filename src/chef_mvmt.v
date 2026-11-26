@@ -27,7 +27,7 @@ wire [4:0] nextx = (go == LEFT)? tilex - 1 : (go == RIGHT)? tilex + 1: tilex; //
 wire [3:0] nexty = (go == UP)? tiley - 1 : (go == DOWN)? tiley + 1: tiley;
 
 // is this next tile floor?
-wire floor =  (nextx >= 1 && nextx <= 18 && nexty >= 4 && nexty <= 10) && !(nexty == 7 && nextx >= 6 && nextx <= 13); //defines whihc tiles the chef can enter 
+wire floor =  (nextx >= 1 && nextx <= 18 && nexty >= 4 && nexty <= 10) && !(nexty == 8 && nextx >= 6 && nextx <= 13); //defines whihc tiles the chef can enter 
 
 always @(posedge clk) //movement FSM
 begin

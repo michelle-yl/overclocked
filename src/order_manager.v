@@ -3,6 +3,7 @@ module order_manager(
     input wire CLOCK_50, 
     input wire resetn, //active low
     input wire correct_order, //signal that is passed from order_verify.v for proper completion of order
+    input wire [1:0] randorder, // random order determined by lfsr
     output reg [1:0] order_id, //tells you which of four recipes is currently active 
     output reg [2:0] required_ingredients //tells you required ingredients for recipe 
 );
@@ -10,12 +11,13 @@ module order_manager(
     // Move through four burger recipes after successful submissions
     always @(posedge CLOCK_50) begin
         if (!resetn) //if reset set current order to 0
-            order_id <= 2'd0;
+            order_id <= randorder; // random now
         else if (correct_order) begin //if player completed previous burger correctly change the order
-            if (order_id == 2'd3) //if we are on fourth recipe go back to the first one instead of going beyond avaible recipes
-                order_id <= 2'd0;
-            else
-                order_id <= order_id + 1'b1; //move forward one recipe 
+            order_id <= randorder; // random now
+            // if (order_id == 2'd3) //if we are on fourth recipe go back to the first one instead of going beyond avaible recipes
+            //     order_id <= 2'd0;
+            // else
+            //     order_id <= order_id + 1'b1; //move forward one recipe 
         end 
     end
 

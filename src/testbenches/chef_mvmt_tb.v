@@ -81,22 +81,22 @@ module chef_mvmt_tb();
         up = 0; right = 0;
         // expect still 3,4
 
-        // Walk down 2 and right 3 to tile (6,6), next to the assembly counter
+        // Walk down 3 and right 3 to tile (6,7), next to the assembly counter
         down = 1;
-        wait_ticks(18);
+        wait_ticks(27);
         down = 0;
         wait_ticks(2);
         right = 1;
         wait_ticks(27);
         right = 0;
         wait_ticks(2);
-        // expect tile 6,6
+        // expect tile 6,7
 
-        // Down into the assembly counter at row 7: blocked
+        // Down into the assembly counter at row 8: blocked
         down = 1;
         wait_ticks(10);
         down = 0;
-        // expect still 6,6
+        // expect still 6,7
         $stop;
     end
 

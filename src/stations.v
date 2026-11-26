@@ -15,7 +15,7 @@ begin
         else if (tilex == 5'd4  && tiley == 4'd4)  station = LETTUCE;
         else if (tilex == 5'd6  && tiley == 4'd4)  station = PATTY;
         else if (tilex == 5'd14 && tiley == 4'd4)  station = STOVE;
-        else if (tilex == 5'd10 && (tiley == 4'd6 || tiley == 4'd8))
+        else if (tilex == 5'd10 && (tiley == 4'd7 || tiley == 4'd9))
                                                    station = PLATE;
         else if (tilex == 5'd3  && tiley == 4'd10) station = TRASH;
     end

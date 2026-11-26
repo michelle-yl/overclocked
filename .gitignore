@@ -24,3 +24,6 @@ work/
 *.wlf
 transcript
 *.vstf
+
+# Editor workspace files
+*.code-workspace

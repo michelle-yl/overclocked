@@ -14,7 +14,7 @@ module vga_background(
     CLOCK_50, KEY, LEDR, VGA_R, VGA_G, VGA_B,
     VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK,
     player_x, player_y, order_id, required_ingredients,
-    heat_level
+    heat_level, held, stove_state, plate
 );
 
     parameter RESOLUTION = "320x240"; // "640x480" "320x240" "160x120"
@@ -44,6 +44,11 @@ module vga_background(
 
     // NEW: Milestone 2 - Heat level for the heat bar graphic
     input wire [5:0] heat_level;
+
+    // NEW: Item display - what the chef holds, the stove, and the plate
+    input wire [2:0] held;
+    input wire [1:0] stove_state;
+    input wire [2:0] plate;
 
     output wire [9:0] LEDR;
 
@@ -99,6 +104,13 @@ module vga_background(
     wire heat_write;
     wire heat_enable;
 
+    // NEW: Item display signals
+    wire [8:0] item_x;
+    wire [7:0] item_y;
+    wire [5:0] item_color;
+    wire item_write;
+    wire item_enable;
+
     // Draw the chef on top of the kitchen background
     sprite_renderer chef_renderer (
         .CLOCK_50(CLOCK_50),
@@ -149,25 +161,46 @@ module vga_background(
         .VGA_write(heat_write)
     );
 
+    // NEW: Item display (held item, stove patty, plate contents)
+    // Lowest priority: draws only when no other renderer is writing
+    assign item_enable = !chef_busy && !chef_write && !order_write && !heat_write;
+
+    helditem item_graphics (
+        .clk(CLOCK_50),
+        .resetn(KEY[0]),
+        .enable(item_enable),
+        .held(held),
+        .stove(stove_state),
+        .plate(plate),
+        .VGAx(item_x),
+        .VGAy(item_y),
+        .VGAcolor(item_color),
+        .VGAwrite(item_write)
+    );
+
     // NEW: Milestone 2
     // Select which renderer controls the VGA adapter inputs
     //
     // The chef has highest priority.
     // The order display has second priority.
     // The heat bar uses VGA when both are not writing.
+    // The item display uses VGA when none of the others are writing.
     //
     // Only one pixel can be written per clock cycle.
 
     assign X = chef_write ? chef_x :
-               order_write ? order_x : heat_x;
+               order_write ? order_x :
+               heat_write ? heat_x : item_x;
 
     assign Y = chef_write ? chef_y :
-               order_write ? order_y : heat_y;
+               order_write ? order_y :
+               heat_write ? heat_y : item_y;
 
     assign color = chef_write ? chef_color :
-                   order_write ? order_color : heat_color;
+                   order_write ? order_color :
+                   heat_write ? heat_color : item_color;
 
-    assign write = chef_write || order_write || heat_write;
+    assign write = chef_write || order_write || heat_write || item_write;
 
     // Instantiate the VGA adapter
     vga_adapter VGA (

@@ -28,6 +28,13 @@ module sprite_renderer (
 
     reg [1:0] state;
 
+    // The chef sprite is 32x32 (2x2 tiles), but the game logic treats the
+    // chef as one 16x16 tile whose top-left corner is (player_x, player_y).
+    // Draw the sprite 8 px left and 16 px up so it is centred on that tile
+    // with its feet on it. Smallest inputs are x 16, y 64, so never negative.
+    wire [8:0] draw_x = player_x - 9'd8;
+    wire [7:0] draw_y = player_y - 8'd16;
+
     // Tracks which pixel of the 32x32 image we are drawing
     // Out of 1024 pixels, 10 bits can keep track
     reg [9:0] pixel_count;
@@ -174,16 +181,16 @@ module sprite_renderer (
 
                 // First time: draw the chef at its starting position
                 if (!sprite_drawn) begin // no sprites have been drawn yet
-                    target_x <= player_x; // chef coordinates into renderer
-                    target_y <= player_y;
+                    target_x <= draw_x; // chef coordinates into renderer
+                    target_y <= draw_y;
                     state <= DRAW; // changes state
                 end
 
                 // If position changes, erase the old chef first
-                else if (player_x != old_x || player_y != old_y) begin
+                else if (draw_x != old_x || draw_y != old_y) begin
                     // If x or y is different, chef has moved
-                    target_x <= player_x;
-                    target_y <= player_y;
+                    target_x <= draw_x;
+                    target_y <= draw_y;
                     state <= ERASE; // change state
                 end
             end
